@@ -1,0 +1,2483 @@
+--- a/.env.example
++++ b/.env.example
+@@ -127,13 +127,8 @@
+ WHATSAPP_CAMPAIGN_MAX_PER_MINUTE=20
+ WHATSAPP_CAMPAIGN_MAX_RECIPIENTS=1000
+ 
+-# ==========================================
+-# SMTP (optional, email notifications)
+-# ==========================================
+-SMTP_HOST=
+-SMTP_PORT=
+-SMTP_USER=
+-SMTP_PASS=
++# (SMTP_* removed: no code sends email and nodemailer was uninstalled.
++#  Leftover SMTP_* lines in an existing .env are ignored.)
+ 
+ # ==========================================
+ # SEED ADMIN (used only by npm run seed:admin)
+--- a/package.json
++++ b/package.json
+@@ -9,8 +9,9 @@
+     "dev": "nodemon src/server.js",
+     "seed:admin": "node src/utils/seedAdmin.js",
+     "lint": "echo \"(add eslint config to enable linting)\" ",
+-    "test": "node --test \"tests/**/*.test.js\"",
+-    "test:db": "node scripts/test-db.js"
++    "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
++    "test:db": "node scripts/test-db.js",
++    "dev:memory": "node scripts/dev-memory.js"
+   },
+   "keywords": [
+     "crm",
+@@ -37,12 +38,12 @@
+     "mongoose": "^8.9.5",
+     "morgan": "^1.10.0",
+     "multer": "^2.2.0",
+-    "nodemailer": "^6.9.16",
+     "twilio": "^5.13.1",
+-    "xlsx": "^0.18.5",
++    "xlsx": "file:vendor/xlsx-0.20.3.tgz",
+     "zod": "^3.24.1"
+   },
+   "devDependencies": {
++    "mongodb-memory-server-core": "10.1.4",
+     "nodemon": "^3.1.9"
+   },
+   "engines": {
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -23,12 +23,12 @@
+         "mongoose": "^8.9.5",
+         "morgan": "^1.10.0",
+         "multer": "^2.2.0",
+-        "nodemailer": "^6.9.16",
+         "twilio": "^5.13.1",
+-        "xlsx": "^0.18.5",
++        "xlsx": "file:vendor/xlsx-0.20.3.tgz",
+         "zod": "^3.24.1"
+       },
+       "devDependencies": {
++        "mongodb-memory-server-core": "10.1.4",
+         "nodemon": "^3.1.9"
+       },
+       "engines": {
+@@ -72,15 +72,6 @@
+         "node": ">= 0.6"
+       }
+     },
+-    "node_modules/adler-32": {
+-      "version": "1.3.1",
+-      "resolved": "https://registry.npmjs.org/adler-32/-/adler-32-1.3.1.tgz",
+-      "integrity": "sha512-ynZ4w/nUUv5rrsR8UUGoe1VC9hZj6V5hU9Qw1HlMDJGEJw5S7TfTErWTjMys6M7vr0YWcPqs3qAr4ss0nDfP+A==",
+-      "license": "Apache-2.0",
+-      "engines": {
+-        "node": ">=0.8"
+-      }
+-    },
+     "node_modules/agent-base": {
+       "version": "6.0.2",
+       "resolved": "https://registry.npmjs.org/agent-base/-/agent-base-6.0.2.tgz",
+@@ -142,6 +133,16 @@
+       "integrity": "sha512-PCVAQswWemu6UdxsDFFX/+gVeYqKAod3D3UVm91jHwynguOwAvYPhx8nNlM++NqRcK6CxxpUafjmhIdKiHibqg==",
+       "license": "MIT"
+     },
++    "node_modules/async-mutex": {
++      "version": "0.5.0",
++      "resolved": "https://registry.npmjs.org/async-mutex/-/async-mutex-0.5.0.tgz",
++      "integrity": "sha512-1A94B18jkJ3DYq284ohPxoXbfTA5HsQ7/Mf4DEhcyLx3Bz27Rh59iScbB6EPiP+B+joue6YCxcMXSbFC1tZKwA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "^2.4.0"
++      }
++    },
+     "node_modules/asynckit": {
+       "version": "0.4.0",
+       "resolved": "https://registry.npmjs.org/asynckit/-/asynckit-0.4.0.tgz",
+@@ -160,6 +161,21 @@
+         "proxy-from-env": "^2.1.0"
+       }
+     },
++    "node_modules/b4a": {
++      "version": "1.9.0",
++      "resolved": "https://registry.npmjs.org/b4a/-/b4a-1.9.0.tgz",
++      "integrity": "sha512-dpfcF9fDNR6++cthXR67iyhgqWy9CBouAvIWhIntzBG6cvK/cnIPiZQjBwi/ZqjjBEDGfoNDtmB0kTjroOJ3pQ==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "peerDependencies": {
++        "react-native-b4a": "*"
++      },
++      "peerDependenciesMeta": {
++        "react-native-b4a": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/balanced-match": {
+       "version": "4.0.4",
+       "resolved": "https://registry.npmjs.org/balanced-match/-/balanced-match-4.0.4.tgz",
+@@ -170,6 +186,103 @@
+         "node": "18 || 20 || >=22"
+       }
+     },
++    "node_modules/bare-buffer": {
++      "version": "3.7.1",
++      "resolved": "https://registry.npmjs.org/bare-buffer/-/bare-buffer-3.7.1.tgz",
++      "integrity": "sha512-cIjZnSO+y89ykVX9x96OVnA6tGORBn7vGJ/e3PCbBHMEyfMNG/ixzOS0lLa6saMlWcs69bSKjxFyDwjK152OMg==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "engines": {
++        "bare": ">=1.20.0"
++      }
++    },
++    "node_modules/bare-events": {
++      "version": "2.9.2",
++      "resolved": "https://registry.npmjs.org/bare-events/-/bare-events-2.9.2.tgz",
++      "integrity": "sha512-AIPKioV7/Y/8KfZ3AAhjPJxLLbY49S64Ym5DakZlUg75qQiTgUq9hEJoEwa4eUezPUlXRy/i5NpsKvo9jgKmoA==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "peer": true,
++      "peerDependencies": {
++        "bare-abort-controller": "*"
++      },
++      "peerDependenciesMeta": {
++        "bare-abort-controller": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/bare-fs": {
++      "version": "4.8.4",
++      "resolved": "https://registry.npmjs.org/bare-fs/-/bare-fs-4.8.4.tgz",
++      "integrity": "sha512-MPC2eyrpbk3A873sK4y6rk+Iv4o2enxTjHZ8zH3HO0mjrpm5XjnguY2XmfidIsDV6vnjpbMBKUAJpV0ISD2SsQ==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "bare-events": "^2.5.4",
++        "bare-path": "^3.0.0",
++        "bare-stream": "^2.6.4",
++        "bare-url": "^2.2.2",
++        "fast-fifo": "^1.3.2"
++      },
++      "engines": {
++        "bare": ">=1.28.0"
++      },
++      "peerDependencies": {
++        "bare-buffer": "*"
++      },
++      "peerDependenciesMeta": {
++        "bare-buffer": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/bare-path": {
++      "version": "3.1.2",
++      "resolved": "https://registry.npmjs.org/bare-path/-/bare-path-3.1.2.tgz",
++      "integrity": "sha512-ZyKbsuuqK6Ag0K8pX6V5Txq6XeJRvY+wXucnFGRjiyVYP9YWDpIQugk/b+enRYrEYBJaqLzghRQpXPMR7341Nw==",
++      "dev": true,
++      "license": "Apache-2.0"
++    },
++    "node_modules/bare-stream": {
++      "version": "2.13.4",
++      "resolved": "https://registry.npmjs.org/bare-stream/-/bare-stream-2.13.4.tgz",
++      "integrity": "sha512-PcrQ8lVLbiJscNm1Kez+Yp4Gy4AHGcN1lzwjvf5NybWen7VvEgUfyfnXYJ2zNqWnzOfCb1Abq6lH8ti0syQszA==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "b4a": "^1.8.1",
++        "streamx": "^2.25.0",
++        "teex": "^1.0.1"
++      },
++      "peerDependencies": {
++        "bare-abort-controller": "*",
++        "bare-buffer": "*",
++        "bare-events": "*"
++      },
++      "peerDependenciesMeta": {
++        "bare-abort-controller": {
++          "optional": true
++        },
++        "bare-buffer": {
++          "optional": true
++        },
++        "bare-events": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/bare-url": {
++      "version": "2.5.6",
++      "resolved": "https://registry.npmjs.org/bare-url/-/bare-url-2.5.6.tgz",
++      "integrity": "sha512-iqkXHkW65De+BT14nHLiBFbNuJ/DdMrZaVNJ1IXPctpK6b1olUJ5Qmy8QBvwROajTiGztso2n82kFEvCsNG7Rg==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "bare-buffer": "^3.0.0",
++        "bare-path": "^3.0.0"
++      }
++    },
+     "node_modules/basic-auth": {
+       "version": "2.0.1",
+       "resolved": "https://registry.npmjs.org/basic-auth/-/basic-auth-2.0.1.tgz",
+@@ -321,17 +434,17 @@
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
+-    "node_modules/cfb": {
+-      "version": "1.2.2",
+-      "resolved": "https://registry.npmjs.org/cfb/-/cfb-1.2.2.tgz",
+-      "integrity": "sha512-KfdUZsSOw19/ObEWasvBP/Ac4reZvAGauZhs6S/gqNhXhI7cKwvlH7ulj+dOEYnca4bm4SGo8C1bTAQvnTjgQA==",
+-      "license": "Apache-2.0",
+-      "dependencies": {
+-        "adler-32": "~1.3.0",
+-        "crc-32": "~1.2.0"
+-      },
++    "node_modules/camelcase": {
++      "version": "6.3.0",
++      "resolved": "https://registry.npmjs.org/camelcase/-/camelcase-6.3.0.tgz",
++      "integrity": "sha512-Gmy6FhYlCY7uOElZUSbxo2UCDH8owEk996gkbrpsgGtrJLM3J7jGxl9Ic7Qwwj4ivOE5AWZWRMecDdF7hqGjFA==",
++      "dev": true,
++      "license": "MIT",
+       "engines": {
+-        "node": ">=0.8"
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
+       }
+     },
+     "node_modules/chokidar": {
+@@ -371,15 +484,6 @@
+         "node": ">=9"
+       }
+     },
+-    "node_modules/codepage": {
+-      "version": "1.15.0",
+-      "resolved": "https://registry.npmjs.org/codepage/-/codepage-1.15.0.tgz",
+-      "integrity": "sha512-3g6NUTPd/YtuuGrhMnOMRjFc+LJw/bnMp3+0r/Wcz3IXUuCosKRJvMphm5+Q+bvTVGcJJuRvVLuYba+WojaFaA==",
+-      "license": "Apache-2.0",
+-      "engines": {
+-        "node": ">=0.8"
+-      }
+-    },
+     "node_modules/combined-stream": {
+       "version": "1.0.8",
+       "resolved": "https://registry.npmjs.org/combined-stream/-/combined-stream-1.0.8.tgz",
+@@ -392,6 +496,13 @@
+         "node": ">= 0.8"
+       }
+     },
++    "node_modules/commondir": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/commondir/-/commondir-1.0.1.tgz",
++      "integrity": "sha512-W9pAhw0ja1Edb5GVdIF1mjZw/ASI0AlShXM83UUGe2DVr5TdAPEA1OA8m/g8zWp9x6On7gqufY+FatDbC3MDQg==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/content-disposition": {
+       "version": "0.5.4",
+       "resolved": "https://registry.npmjs.org/content-disposition/-/content-disposition-0.5.4.tgz",
+@@ -458,18 +569,6 @@
+         "url": "https://opencollective.com/express"
+       }
+     },
+-    "node_modules/crc-32": {
+-      "version": "1.2.2",
+-      "resolved": "https://registry.npmjs.org/crc-32/-/crc-32-1.2.2.tgz",
+-      "integrity": "sha512-ROmzCKrTnOwybPcJApAA6WBWij23HVfGVNKqqrZpuyZOHqK2CwHSvpGuyt/UNNvaIjEd8X5IFGp4Mh+Ie1IHJQ==",
+-      "license": "Apache-2.0",
+-      "bin": {
+-        "crc32": "bin/crc32.njs"
+-      },
+-      "engines": {
+-        "node": ">=0.8"
+-      }
+-    },
+     "node_modules/dayjs": {
+       "version": "1.11.23",
+       "resolved": "https://registry.npmjs.org/dayjs/-/dayjs-1.11.23.tgz",
+@@ -623,6 +722,16 @@
+         "node": ">= 0.6"
+       }
+     },
++    "node_modules/events-universal": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/events-universal/-/events-universal-1.0.1.tgz",
++      "integrity": "sha512-LUd5euvbMLpwOF8m6ivPCbhQeSiYVNb8Vs0fQ8QjXo0JTkEHpz8pxdQf0gStltaPpw0Cca8b39KxvK9cfKRiAw==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "bare-events": "^2.7.0"
++      }
++    },
+     "node_modules/express": {
+       "version": "4.22.3",
+       "resolved": "https://registry.npmjs.org/express/-/express-4.22.3.tgz",
+@@ -694,6 +803,13 @@
+         "express": ">= 4.11"
+       }
+     },
++    "node_modules/fast-fifo": {
++      "version": "1.3.2",
++      "resolved": "https://registry.npmjs.org/fast-fifo/-/fast-fifo-1.3.2.tgz",
++      "integrity": "sha512-/d9sfos4yxzpwkDkuN7k2SqFKtYNmCTzgfEpz82x34IM9/zc8KGxQoXg1liNC/izpRM/MBdt44Nmx41ZWqk+FQ==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/fill-range": {
+       "version": "7.1.1",
+       "resolved": "https://registry.npmjs.org/fill-range/-/fill-range-7.1.1.tgz",
+@@ -725,6 +841,38 @@
+         "node": ">= 0.8"
+       }
+     },
++    "node_modules/find-cache-dir": {
++      "version": "3.3.2",
++      "resolved": "https://registry.npmjs.org/find-cache-dir/-/find-cache-dir-3.3.2.tgz",
++      "integrity": "sha512-wXZV5emFEjrridIgED11OoUKLxiYjAcqot/NJdAkOhlJ+vGzwhOAfcG5OX1jP+S0PcjEn8bdMJv+g2jwQ3Onig==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "commondir": "^1.0.1",
++        "make-dir": "^3.0.2",
++        "pkg-dir": "^4.1.0"
++      },
++      "engines": {
++        "node": ">=8"
++      },
++      "funding": {
++        "url": "https://github.com/avajs/find-cache-dir?sponsor=1"
++      }
++    },
++    "node_modules/find-up": {
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/find-up/-/find-up-4.1.0.tgz",
++      "integrity": "sha512-PpOwAdQ/YlXQ2vj8a3h8IipDuYRi3wceVQQGYWxNINccq40Anw7BlsEXCMbt1Zt+OLA6Fq9suIpIWD0OsnISlw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "locate-path": "^5.0.0",
++        "path-exists": "^4.0.0"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
+     "node_modules/follow-redirects": {
+       "version": "1.16.3",
+       "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.3.tgz",
+@@ -770,15 +918,6 @@
+         "node": ">= 0.6"
+       }
+     },
+-    "node_modules/frac": {
+-      "version": "1.1.2",
+-      "resolved": "https://registry.npmjs.org/frac/-/frac-1.1.2.tgz",
+-      "integrity": "sha512-w/XBfkibaTl3YDqASwfDUqkna4Z2p9cFSr1aHDt0WoMTECnRfBOv2WArlZILlqgWlmdIlALXGpM2AOhEk5W3IA==",
+-      "license": "Apache-2.0",
+-      "engines": {
+-        "node": ">=0.8"
+-      }
+-    },
+     "node_modules/fresh": {
+       "version": "0.5.2",
+       "resolved": "https://registry.npmjs.org/fresh/-/fresh-0.5.2.tgz",
+@@ -1129,6 +1268,19 @@
+         "node": ">=12.0.0"
+       }
+     },
++    "node_modules/locate-path": {
++      "version": "5.0.0",
++      "resolved": "https://registry.npmjs.org/locate-path/-/locate-path-5.0.0.tgz",
++      "integrity": "sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "p-locate": "^4.1.0"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
+     "node_modules/lodash": {
+       "version": "4.18.1",
+       "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.18.1.tgz",
+@@ -1177,6 +1329,32 @@
+       "integrity": "sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==",
+       "license": "MIT"
+     },
++    "node_modules/make-dir": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/make-dir/-/make-dir-3.1.0.tgz",
++      "integrity": "sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "semver": "^6.0.0"
++      },
++      "engines": {
++        "node": ">=8"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/make-dir/node_modules/semver": {
++      "version": "6.3.2",
++      "resolved": "https://registry.npmjs.org/semver/-/semver-6.3.2.tgz",
++      "integrity": "sha512-GYrCADwpu6yV5OAvchkQ27Z5wwMxWAEMg5NNWjyHh/5DboFFqbdbvYNIvZouQpxXyeMPoTOh0vdPYKlf0ZswdQ==",
++      "dev": true,
++      "license": "ISC",
++      "bin": {
++        "semver": "bin/semver.js"
++      }
++    },
+     "node_modules/math-intrinsics": {
+       "version": "1.1.0",
+       "resolved": "https://registry.npmjs.org/math-intrinsics/-/math-intrinsics-1.1.0.tgz",
+@@ -1324,6 +1502,79 @@
+         "whatwg-url": "^14.1.0 || ^13.0.0"
+       }
+     },
++    "node_modules/mongodb-memory-server-core": {
++      "version": "10.1.4",
++      "resolved": "https://registry.npmjs.org/mongodb-memory-server-core/-/mongodb-memory-server-core-10.1.4.tgz",
++      "integrity": "sha512-o8fgY7ZalEd8pGps43fFPr/hkQu1L8i6HFEGbsTfA2zDOW0TopgpswaBCqDr0qD7ptibyPfB5DmC+UlIxbThzA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "async-mutex": "^0.5.0",
++        "camelcase": "^6.3.0",
++        "debug": "^4.3.7",
++        "find-cache-dir": "^3.3.2",
++        "follow-redirects": "^1.15.9",
++        "https-proxy-agent": "^7.0.5",
++        "mongodb": "^6.9.0",
++        "new-find-package-json": "^2.0.0",
++        "semver": "^7.6.3",
++        "tar-stream": "^3.1.7",
++        "tslib": "^2.7.0",
++        "yauzl": "^3.1.3"
++      },
++      "engines": {
++        "node": ">=16.20.1"
++      }
++    },
++    "node_modules/mongodb-memory-server-core/node_modules/agent-base": {
++      "version": "7.1.4",
++      "resolved": "https://registry.npmjs.org/agent-base/-/agent-base-7.1.4.tgz",
++      "integrity": "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 14"
++      }
++    },
++    "node_modules/mongodb-memory-server-core/node_modules/debug": {
++      "version": "4.4.3",
++      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
++      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "ms": "^2.1.3"
++      },
++      "engines": {
++        "node": ">=6.0"
++      },
++      "peerDependenciesMeta": {
++        "supports-color": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/mongodb-memory-server-core/node_modules/https-proxy-agent": {
++      "version": "7.0.6",
++      "resolved": "https://registry.npmjs.org/https-proxy-agent/-/https-proxy-agent-7.0.6.tgz",
++      "integrity": "sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "agent-base": "^7.1.2",
++        "debug": "4"
++      },
++      "engines": {
++        "node": ">= 14"
++      }
++    },
++    "node_modules/mongodb-memory-server-core/node_modules/ms": {
++      "version": "2.1.3",
++      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
++      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/mongoose": {
+       "version": "8.24.8",
+       "resolved": "https://registry.npmjs.org/mongoose/-/mongoose-8.24.8.tgz",
+@@ -1449,15 +1700,44 @@
+         "node": ">= 0.6"
+       }
+     },
+-    "node_modules/nodemailer": {
+-      "version": "6.10.1",
+-      "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-6.10.1.tgz",
+-      "integrity": "sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==",
+-      "license": "MIT-0",
++    "node_modules/new-find-package-json": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/new-find-package-json/-/new-find-package-json-2.0.0.tgz",
++      "integrity": "sha512-lDcBsjBSMlj3LXH2v/FW3txlh2pYTjmbOXPYJD93HI5EwuLzI11tdHSIpUMmfq/IOsldj4Ps8M8flhm+pCK4Ew==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "debug": "^4.3.4"
++      },
++      "engines": {
++        "node": ">=12.22.0"
++      }
++    },
++    "node_modules/new-find-package-json/node_modules/debug": {
++      "version": "4.4.3",
++      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
++      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "ms": "^2.1.3"
++      },
+       "engines": {
+-        "node": ">=6.0.0"
++        "node": ">=6.0"
++      },
++      "peerDependenciesMeta": {
++        "supports-color": {
++          "optional": true
++        }
+       }
+     },
++    "node_modules/new-find-package-json/node_modules/ms": {
++      "version": "2.1.3",
++      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
++      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/nodemon": {
+       "version": "3.1.14",
+       "resolved": "https://registry.npmjs.org/nodemon/-/nodemon-3.1.14.tgz",
+@@ -1564,6 +1844,45 @@
+         "node": ">= 0.8"
+       }
+     },
++    "node_modules/p-limit": {
++      "version": "2.3.0",
++      "resolved": "https://registry.npmjs.org/p-limit/-/p-limit-2.3.0.tgz",
++      "integrity": "sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "p-try": "^2.0.0"
++      },
++      "engines": {
++        "node": ">=6"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/p-locate": {
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/p-locate/-/p-locate-4.1.0.tgz",
++      "integrity": "sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "p-limit": "^2.2.0"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/p-try": {
++      "version": "2.2.0",
++      "resolved": "https://registry.npmjs.org/p-try/-/p-try-2.2.0.tgz",
++      "integrity": "sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6"
++      }
++    },
+     "node_modules/parseurl": {
+       "version": "1.3.3",
+       "resolved": "https://registry.npmjs.org/parseurl/-/parseurl-1.3.3.tgz",
+@@ -1573,12 +1892,29 @@
+         "node": ">= 0.8"
+       }
+     },
++    "node_modules/path-exists": {
++      "version": "4.0.0",
++      "resolved": "https://registry.npmjs.org/path-exists/-/path-exists-4.0.0.tgz",
++      "integrity": "sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=8"
++      }
++    },
+     "node_modules/path-to-regexp": {
+       "version": "0.1.13",
+       "resolved": "https://registry.npmjs.org/path-to-regexp/-/path-to-regexp-0.1.13.tgz",
+       "integrity": "sha512-A/AGNMFN3c8bOlvV9RreMdrv7jsmF9XIfDeCd87+I8RNg6s78BhJxMu69NEMHBSJFxKidViTEdruRwEk/WIKqA==",
+       "license": "MIT"
+     },
++    "node_modules/pend": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/pend/-/pend-1.2.0.tgz",
++      "integrity": "sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/picomatch": {
+       "version": "2.3.2",
+       "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-2.3.2.tgz",
+@@ -1592,6 +1928,19 @@
+         "url": "https://github.com/sponsors/jonschlinkert"
+       }
+     },
++    "node_modules/pkg-dir": {
++      "version": "4.2.0",
++      "resolved": "https://registry.npmjs.org/pkg-dir/-/pkg-dir-4.2.0.tgz",
++      "integrity": "sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "find-up": "^4.0.0"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
+     "node_modules/proxy-addr": {
+       "version": "2.0.8",
+       "resolved": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.8.tgz",
+@@ -1883,18 +2232,6 @@
+         "memory-pager": "^1.0.2"
+       }
+     },
+-    "node_modules/ssf": {
+-      "version": "0.11.2",
+-      "resolved": "https://registry.npmjs.org/ssf/-/ssf-0.11.2.tgz",
+-      "integrity": "sha512-+idbmIXoYET47hH+d7dfm2epdOMUDjqcB4648sTZ+t2JwoyBFL/insLfB/racrDmsKB3diwsDA696pZMieAC5g==",
+-      "license": "Apache-2.0",
+-      "dependencies": {
+-        "frac": "~1.1.2"
+-      },
+-      "engines": {
+-        "node": ">=0.8"
+-      }
+-    },
+     "node_modules/statuses": {
+       "version": "2.0.2",
+       "resolved": "https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz",
+@@ -1912,6 +2249,18 @@
+         "node": ">=10.0.0"
+       }
+     },
++    "node_modules/streamx": {
++      "version": "2.28.1",
++      "resolved": "https://registry.npmjs.org/streamx/-/streamx-2.28.1.tgz",
++      "integrity": "sha512-zEzXb0s5Cds7tqMH6rhZ05lcJydCWiQPEwiNngVqzsxCc962vLY4Uw+mW7od8kDH258k2Uz/JrOkdIAAhSh9VA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "events-universal": "^1.0.0",
++        "fast-fifo": "^1.3.2",
++        "text-decoder": "^1.1.0"
++      }
++    },
+     "node_modules/supports-color": {
+       "version": "5.5.0",
+       "resolved": "https://registry.npmjs.org/supports-color/-/supports-color-5.5.0.tgz",
+@@ -1925,6 +2274,39 @@
+         "node": ">=4"
+       }
+     },
++    "node_modules/tar-stream": {
++      "version": "3.2.2",
++      "resolved": "https://registry.npmjs.org/tar-stream/-/tar-stream-3.2.2.tgz",
++      "integrity": "sha512-+8NeqHRjQWH9nYlwo2gamAMImZCVzI4UoEgDpWorBt9OEfppiZn+uSkskzQKPWIZyji/C8fpWO7u69G0DX0tbg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "b4a": "^1.9.0",
++        "bare-fs": "^4.8.2",
++        "fast-fifo": "^1.3.2",
++        "streamx": "^2.28.1"
++      }
++    },
++    "node_modules/teex": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/teex/-/teex-1.0.1.tgz",
++      "integrity": "sha512-eYE6iEI62Ni1H8oIa7KlDU6uQBtqr4Eajni3wX7rpfXD8ysFx8z0+dri+KWEPWpBsxXfxu58x/0jvTVT1ekOSg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "streamx": "^2.12.5"
++      }
++    },
++    "node_modules/text-decoder": {
++      "version": "1.2.7",
++      "resolved": "https://registry.npmjs.org/text-decoder/-/text-decoder-1.2.7.tgz",
++      "integrity": "sha512-vlLytXkeP4xvEq2otHeJfSQIRyWxo/oZGEbXrtEEF9Hnmrdly59sUbzZ/QgyWuLYHctCHxFF4tRQZNQ9k60ExQ==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "b4a": "^1.6.4"
++      }
++    },
+     "node_modules/to-regex-range": {
+       "version": "5.0.1",
+       "resolved": "https://registry.npmjs.org/to-regex-range/-/to-regex-range-5.0.1.tgz",
+@@ -1969,6 +2351,13 @@
+         "node": ">=18"
+       }
+     },
++    "node_modules/tslib": {
++      "version": "2.9.1",
++      "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.9.1.tgz",
++      "integrity": "sha512-a4Ux9VKuIMHsOS7ENbEq6hK2ZGYIT27Rtl0E4eD9KqwxhKiQeMZE/9xb3IdYwWaSOyIBQLExhQgXDTYoiCxnWA==",
++      "dev": true,
++      "license": "0BSD"
++    },
+     "node_modules/twilio": {
+       "version": "5.13.1",
+       "resolved": "https://registry.npmjs.org/twilio/-/twilio-5.13.1.tgz",
+@@ -2056,38 +2445,11 @@
+         "node": ">=18"
+       }
+     },
+-    "node_modules/wmf": {
+-      "version": "1.0.2",
+-      "resolved": "https://registry.npmjs.org/wmf/-/wmf-1.0.2.tgz",
+-      "integrity": "sha512-/p9K7bEh0Dj6WbXg4JG0xvLQmIadrner1bi45VMJTfnbVHsc7yIajZyoSoK60/dtVBs12Fm6WkUI5/3WAVsNMw==",
+-      "license": "Apache-2.0",
+-      "engines": {
+-        "node": ">=0.8"
+-      }
+-    },
+-    "node_modules/word": {
+-      "version": "0.3.0",
+-      "resolved": "https://registry.npmjs.org/word/-/word-0.3.0.tgz",
+-      "integrity": "sha512-OELeY0Q61OXpdUfTp+oweA/vtLVg5VDOXh+3he3PNzLGG/y0oylSOC1xRVj0+l4vQ3tj/bB1HVHv1ocXkQceFA==",
+-      "license": "Apache-2.0",
+-      "engines": {
+-        "node": ">=0.8"
+-      }
+-    },
+     "node_modules/xlsx": {
+-      "version": "0.18.5",
+-      "resolved": "https://registry.npmjs.org/xlsx/-/xlsx-0.18.5.tgz",
+-      "integrity": "sha512-dmg3LCjBPHZnQp5/F/+nnTa+miPJxUXB6vtk42YjBBKayDNagxGEeIdWApkYPOf3Z3pm3k62Knjzp7lMeTEtFQ==",
++      "version": "0.20.3",
++      "resolved": "file:vendor/xlsx-0.20.3.tgz",
++      "integrity": "sha512-oLDq3jw7AcLqKWH2AhCpVTZl8mf6X2YReP+Neh0SJUzV/BdZYjth94tG5toiMB1PPrYtxOCfaoUCkvtuH+3AJA==",
+       "license": "Apache-2.0",
+-      "dependencies": {
+-        "adler-32": "~1.3.0",
+-        "cfb": "~1.2.1",
+-        "codepage": "~1.15.0",
+-        "crc-32": "~1.2.1",
+-        "ssf": "~0.11.2",
+-        "wmf": "~1.0.1",
+-        "word": "~0.3.0"
+-      },
+       "bin": {
+         "xlsx": "bin/xlsx.njs"
+       },
+@@ -2104,6 +2466,19 @@
+         "node": ">=6.0"
+       }
+     },
++    "node_modules/yauzl": {
++      "version": "3.4.0",
++      "resolved": "https://registry.npmjs.org/yauzl/-/yauzl-3.4.0.tgz",
++      "integrity": "sha512-jIH9yLR9wqr0wOS0TpBvo/g/2UgZH5qePVbjgRliiF0BYvOZyaBknKsF+x9Iht0O6sqgnB93rCICdOZFecJuDw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "pend": "~1.2.0"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/zod": {
+       "version": "3.25.76",
+       "resolved": "https://registry.npmjs.org/zod/-/zod-3.25.76.tgz",
+--- /dev/null
++++ b/scripts/dev-memory.js
+@@ -0,0 +1,122 @@
++/**
++ * `npm run dev:memory` — run the API locally against a THROWAWAY in-memory
++ * MongoDB with synthetic data. Safe even when backend/.env points at
++ * production: every variable the app reads is set here first, and dotenv
++ * never overrides a variable that is already set (even to "").
++ *
++ *  - MongoDB: mongodb-memory-server-core on 127.0.0.1, deleted on exit.
++ *  - WhatsApp sending and campaigns: forced OFF; no Meta/Twilio/MSG91 keys.
++ *  - Cloudinary: not configured (uploads return a clear error).
++ *  - Seeds synthetic users and records only (no real patient data).
++ *
++ * Options (env): DEV_PORT (5055), DEV_CLIENT_URL (http://localhost:4180),
++ *   DEV_RATE_LIMIT_MAX (API requests per 15 min per IP; default = production default 300).
++ * Dev-only logins (in-memory DB only):
++ *   admin@dev.local / DevAdmin#2026     staff@dev.local / DevStaff#2026
++ */
++const crypto = require("node:crypto");
++const assert = require("node:assert/strict");
++const { MongoMemoryServer } = require("mongodb-memory-server-core");
++
++const PORT = Number(process.env.DEV_PORT || 5055);
++const CLIENT_URL = process.env.DEV_CLIENT_URL || "http://localhost:4180";
++
++async function main() {
++  const mongod = await MongoMemoryServer.create({ instance: { launchTimeout: 60000 } });
++  const uri = mongod.getUri("nakul_crm_dev");
++  assert.ok(["127.0.0.1", "localhost"].includes(new URL(uri).hostname), "refusing a non-loopback database");
++
++  const blank = (keys) => Object.fromEntries(keys.map((k) => [k, ""]));
++  Object.assign(process.env, {
++    ...blank([
++      "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "CLOUDINARY_CLOUD_NAME", "CRM_URL", "RENDER_GIT_COMMIT",
++      "META_WHATSAPP_ACCESS_TOKEN", "META_WHATSAPP_BUSINESS_ACCOUNT_ID", "META_WHATSAPP_PHONE_NUMBER_ID", "META_WHATSAPP_VERIFY_TOKEN",
++      "MSG91_AUTH_KEY", "MSG91_WEBHOOK_SECRET", "MSG91_WHATSAPP_NUMBER",
++      "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_MESSAGING_SERVICE_SID", "TWILIO_STATUS_CALLBACK_URL",
++      "TWILIO_TEST_CONTENT_SID", "TWILIO_WEBHOOK_URL", "TWILIO_WHATSAPP_FROM", "TWILIO_WHATSAPP_SANDBOX",
++      "WHATSAPP_PROVIDER", "WHATSAPP_TEST_ALLOWLIST", "WHATSAPP_RESTRICT_TO_ALLOWLIST",
++      "WHATSAPP_CAMPAIGN_MAX_PER_MINUTE", "WHATSAPP_CAMPAIGN_MAX_RECIPIENTS",
++      "SEED_ADMIN_EMAIL", "SEED_ADMIN_NAME", "SEED_ADMIN_PASSWORD", "SEED_ADMIN_PHONE",
++      "PUBLIC_RATE_LIMIT_MAX_REQUESTS", "RATE_LIMIT_WINDOW_MINUTES", "JWT_EXPIRES_IN",
++    ]),
++    NODE_ENV: "development",
++    PORT: String(PORT),
++    CLIENT_URL,
++    MONGODB_URI: uri,
++    JWT_SECRET: crypto.randomBytes(32).toString("hex"),
++    COOKIE_SECRET: crypto.randomBytes(32).toString("hex"),
++    WHATSAPP_SENDING_ENABLED: "false",
++    WHATSAPP_CAMPAIGNS_ENABLED: "false",
++    // Production default (300 per 15 min per IP) unless overridden for heavy local testing.
++    RATE_LIMIT_MAX_REQUESTS: process.env.DEV_RATE_LIMIT_MAX || "",
++  });
++
++  const env = require("../src/config/env");
++  assert.equal(env.MONGODB_URI, uri, "MONGODB_URI must be the in-memory server");
++  assert.equal(env.WHATSAPP_SENDING_ENABLED, false);
++  assert.equal(env.WHATSAPP_CAMPAIGNS_ENABLED, false);
++
++  const { connectDB } = require("../src/config/db");
++  await connectDB();
++  await seed();
++
++  const app = require("../src/app");
++  const server = app.listen(PORT, "127.0.0.1", () => {
++    console.log(`\n[dev:memory] API  http://localhost:${PORT}/api/v1  (in-memory MongoDB, sending OFF)`);
++    console.log(`[dev:memory] CORS ${CLIENT_URL}`);
++    console.log("[dev:memory] admin@dev.local / DevAdmin#2026   staff@dev.local / DevStaff#2026\n");
++  });
++
++  const stop = async () => {
++    server.close();
++    await require("mongoose").disconnect();
++    await mongod.stop();
++    process.exit(0);
++  };
++  process.on("SIGINT", stop);
++  process.on("SIGTERM", stop);
++}
++
++async function seed() {
++  const User = require("../src/models/User");
++  const Customer = require("../src/models/Customer");
++  const Lead = require("../src/models/Lead");
++  const generateId = require("../src/utils/generateId");
++  await Promise.all([User.init(), Customer.init(), Lead.init()]);
++
++  await User.create({ name: "Dev Admin", email: "admin@dev.local", password: "DevAdmin#2026", role: "admin" });
++  const staff = await User.create({ name: "Dev Staff", email: "staff@dev.local", password: "DevStaff#2026", role: "staff" });
++
++  const cities = ["Pune", "Nashik", "Agra", "Delhi"];
++  await Customer.insertMany(
++    Array.from({ length: 40 }, (_, i) => ({
++      customerId: generateId("CUS"),
++      name: `Synthetic Patient ${i + 1}`,
++      mobile: `90000${String(10000 + i).slice(-5)}`,
++      city: cities[i % cities.length],
++      gender: i % 2 ? "female" : "male",
++      marketingOptIn: i % 3 === 0,
++      source: "walk_in",
++      status: i % 7 === 0 ? "inactive" : "active",
++    }))
++  );
++  const priorities = ["low", "medium", "high", "urgent"];
++  await Lead.insertMany(
++    Array.from({ length: 12 }, (_, i) => ({
++      leadId: generateId("LEAD"),
++      name: `Synthetic Lead ${i + 1}`,
++      mobile: `91111${String(10000 + i).slice(-5)}`,
++      source: "website",
++      status: "new",
++      priority: priorities[i % 4],
++      priorityRank: (i % 4) + 1,
++      assignedTo: i % 2 ? staff._id : null,
++      notes: `Synthetic note ${i + 1}`,
++    }))
++  );
++}
++
++main().catch((err) => {
++  console.error("[dev:memory] failed:", err.message);
++  process.exit(1);
++});
+--- a/scripts/test-db.js
++++ b/scripts/test-db.js
+@@ -3,14 +3,16 @@
+  * and FAILS (instead of skipping) when mongodb-memory-server is unavailable.
+  *
+  * Never touches a real database: see tests/helpers/memoryDb.js.
+- * Prerequisite (not a package.json dependency; first run downloads a
+- * ~590 MB mongod 7.0.14 binary into the mongodb-memory-server cache):
+- *   npm i --no-save mongodb-memory-server@10.1.4
+- * or set MONGODB_MEMORY_SERVER_MODULE to an existing install.
++ * Files run one at a time: each DB suite starts its own mongod, and suites
++ * share uploads/ (temp-file cleanup assertions would see each other).
++ * Uses the devDependency mongodb-memory-server-core. The first run downloads
++ * a ~590 MB mongod 7.0.14 archive (~160 MB unpacked) into
++ * ~/.cache/mongodb-binaries (override with MONGOMS_DOWNLOAD_DIR); CI should
++ * cache that directory. No download ever happens during `npm install`.
+  */
+ const { spawnSync } = require("node:child_process");
+ 
+-const result = spawnSync(process.execPath, ["--test", "tests/*.db.test.js"], {
++const result = spawnSync(process.execPath, ["--test", "--test-concurrency=1", "tests/*.db.test.js"], {
+   stdio: "inherit",
+   env: { ...process.env, REQUIRE_DB_TESTS: "1" },
+ });
+--- a/src/config/env.js
++++ b/src/config/env.js
+@@ -185,11 +185,6 @@
+   WHATSAPP_CAMPAIGN_MAX_PER_MINUTE: boundedInt(process.env.WHATSAPP_CAMPAIGN_MAX_PER_MINUTE, 20, 1, 600),
+   WHATSAPP_CAMPAIGN_MAX_RECIPIENTS: boundedInt(process.env.WHATSAPP_CAMPAIGN_MAX_RECIPIENTS, 1000, 1, 20000),
+ 
+-  SMTP_HOST: process.env.SMTP_HOST || "",
+-  SMTP_PORT: process.env.SMTP_PORT || "",
+-  SMTP_USER: process.env.SMTP_USER || "",
+-  SMTP_PASS: process.env.SMTP_PASS || "",
+-
+   SEED_ADMIN_NAME: process.env.SEED_ADMIN_NAME || "Super Admin",
+   SEED_ADMIN_EMAIL: process.env.SEED_ADMIN_EMAIL || "admin@nakulpathology.com",
+   SEED_ADMIN_PHONE: process.env.SEED_ADMIN_PHONE || "9999999999",
+--- a/src/controllers/customer.controller.js
++++ b/src/controllers/customer.controller.js
+@@ -192,6 +192,14 @@
+ });
+ 
+ // POST /api/v1/customers/import
++//
++// One import at a time per server process: a second upload while one is
++// running gets 409 instead of racing it (no duplicate imports from a double
++// click or a retry). The import itself is idempotent — re-uploading the same
++// file counts existing mobiles as duplicates — so after a dropped connection
++// the user can safely upload again.
++let importInProgress = false;
++
+ const importCustomers = asyncHandler(async (req, res) => {
+   if (!req.file) throw ApiError.badRequest("Please upload an .xlsx, .xls or .csv file.");
+ 
+@@ -200,12 +208,26 @@
+     try {
+       columnMapping = JSON.parse(req.body.columnMapping);
+     } catch (err) {
++      columnMapping = null;
++    }
++    if (!columnMapping || typeof columnMapping !== "object" || Array.isArray(columnMapping)) {
+       await fs.unlink(req.file.path).catch(() => {});
+-      throw ApiError.badRequest("columnMapping must be valid JSON, e.g. {\"name\":\"Full Name\"}.");
++      throw ApiError.badRequest("columnMapping must be a JSON object, e.g. {\"name\":\"Full Name\"}.");
+     }
+   }
+ 
+-  const summary = await excelService.importCustomersFromFile(req.file.path, { columnMapping });
++  if (importInProgress) {
++    await fs.unlink(req.file.path).catch(() => {});
++    throw ApiError.conflict("Another customer import is already running. Please wait for it to finish.");
++  }
++
++  importInProgress = true;
++  let summary;
++  try {
++    summary = await excelService.importCustomersFromFile(req.file.path, { columnMapping });
++  } finally {
++    importInProgress = false;
++  }
+ 
+   await recordAudit({
+     user: req.user,
+@@ -214,7 +236,7 @@
+     entityId: null,
+     description:
+       `Imported customers: ${summary.successCount} created, ${summary.duplicateCount} duplicates, ` +
+-      `${summary.invalidCount} invalid, ${summary.skippedCount} skipped (of ${summary.totalRows} rows).`,
++      `${summary.invalidCount} invalid, ${summary.skippedCount} skipped (of ${summary.totalRows} rows) in ${summary.durationMs} ms.`,
+   });
+ 
+   apiResponse.success(res, { message: "Import completed", data: summary });
+@@ -223,8 +245,12 @@
+ // GET /api/v1/customers/import/preview  (helper — inspect columns before mapping)
+ const previewImportFile = asyncHandler(async (req, res) => {
+   if (!req.file) throw ApiError.badRequest("Please upload a file to preview.");
+-  const preview = excelService.readWorkbookPreview(req.file.path);
+-  await fs.unlink(req.file.path).catch(() => {});
++  let preview;
++  try {
++    preview = excelService.readWorkbookPreview(req.file.path);
++  } finally {
++    await fs.unlink(req.file.path).catch(() => {});
++  }
+   apiResponse.success(res, { message: "File preview", data: preview });
+ });
+ 
+@@ -233,7 +259,7 @@
+   const filter = customerService.buildCustomerFilter(req.query);
+   // Safety cap so an unfiltered export of a much larger future dataset
+   // can't exhaust memory; paginate on the client for bigger exports.
+-  const customers = await Customer.find(filter).sort({ createdAt: -1 }).limit(20000);
++  const customers = await Customer.find(filter).sort({ createdAt: -1 }).limit(20000).lean();
+ 
+   const buffer = excelService.buildCustomerExportBuffer(customers);
+   res.setHeader("Content-Disposition", "attachment; filename=customers-export.xlsx");
+--- a/src/controllers/lead.controller.js
++++ b/src/controllers/lead.controller.js
+@@ -25,6 +25,17 @@
+ const PRIORITY_RANK = { low: 1, medium: 2, high: 3, urgent: 4 };
+ const priorityRankOf = (priority) => PRIORITY_RANK[priority] || 0;
+ 
++// Marks the follow-up that a lead's nextFollowUpDate creates. Only THIS one is
++// replaced when the lead's date changes; follow-ups scheduled manually
++// (Follow-ups page / lead details) are never deleted by a lead edit.
++const AUTO_FOLLOWUP_DESCRIPTION = "Follow-up scheduled from lead";
++
++const sameInstant = (a, b) => {
++  const ta = a ? new Date(a).getTime() : null;
++  const tb = b ? new Date(b).getTime() : null;
++  return ta === tb || (Number.isNaN(ta) && Number.isNaN(tb));
++};
++
+ // ======================================================
+ // CREATE LEAD
+ // POST /api/v1/leads
+@@ -97,7 +108,7 @@
+         time: "",
+ 
+         description:
+-          "Follow-up scheduled from lead",
++          AUTO_FOLLOWUP_DESCRIPTION,
+ 
+         assignedTo:
+           body.assignedTo || null,
+@@ -425,12 +436,15 @@
+       Object.prototype.hasOwnProperty.call(
+         updates,
+         "nextFollowUpDate"
+-      )
++      ) &&
++      // Re-sending the unchanged date (e.g. a full-form save) is a no-op.
++      !sameInstant(updates.nextFollowUpDate, existingLead.nextFollowUpDate)
+     ) {
+-      // Remove old pending follow-ups
++      // Replace only the lead's auto-created pending follow-up.
+       await FollowUp.deleteMany({
+         lead: lead._id,
+         status: "pending",
++        description: AUTO_FOLLOWUP_DESCRIPTION,
+       });
+ 
+       // Create new pending follow-up
+@@ -449,7 +463,7 @@
+           time: "",
+ 
+           description:
+-            "Follow-up scheduled from lead",
++            AUTO_FOLLOWUP_DESCRIPTION,
+ 
+           assignedTo:
+             lead.assignedTo?._id ||
+--- a/src/services/campaign.service.js
++++ b/src/services/campaign.service.js
+@@ -147,7 +147,7 @@
+   if (campaignProvider !== "twilio") {
+     issues.push({
+       code: "provider_unsupported",
+-      message: "Only Twilio campaign delivery is implemented. Meta campaigns cannot be started.",
++      message: `Only Twilio campaign delivery is implemented. ${campaignProvider === "msg91" ? "MSG91" : "Meta"} campaigns cannot be started.`,
+     });
+   }
+   const readiness = twilioWhatsappService.getSendReadiness();
+--- a/src/services/excel.service.js
++++ b/src/services/excel.service.js
+@@ -2,169 +2,415 @@
+ const fs = require("fs/promises");
+ const Customer = require("../models/Customer");
+ const generateId = require("../utils/generateId");
++const ApiError = require("../utils/ApiError");
+ const { normalizePhone, isValidIndianMobile } = require("../utils/normalizePhone");
+ 
++/** Hard cap per file so one upload can't exhaust memory or run for many minutes. */
++const MAX_IMPORT_ROWS = 50000;
++/** Errors/warnings returned to the client are capped; counts are always exact. */
++const MAX_MESSAGES = 50;
++
+ /**
+- * Default mapping from expected CRM fields to a list of likely source
+- * column header names (case-insensitive). The admin can override this
+- * with a custom `columnMapping` object: { crmField: "Excel Column Name" }.
++ * Default mapping from CRM fields to likely source column headers, compared
++ * on aliasKey() (case/whitespace-insensitive, "_" and "-" read as spaces).
++ * The client may send an explicit `columnMapping` { crmField: "Column Label" }
++ * which wins; an explicit null/"" means "do not import this field".
++ *
++ * IDENTICAL to FIELD_ALIASES in frontend/src/utils/importWorkbook.ts.
+  */
+ const DEFAULT_HEADER_ALIASES = {
+-  name: ["name", "full name", "patient name", "customer name"],
+-  mobile: ["mobile", "phone", "phone number", "mobile number", "contact", "contact number"],
+-  whatsappNumber: ["whatsapp", "whatsapp number", "whatsapp no"],
+-  email: ["email", "email address", "e-mail"],
++  name: ["name", "full name", "customer name", "customer", "patient name", "patient"],
++  mobile: ["mobile", "mobile number", "phone", "phone number", "contact", "contact number", "mobile no", "phone no"],
++  whatsappNumber: ["whatsapp", "whatsapp number", "whatsapp no", "whatsapp mobile"],
++  email: ["email", "email address", "e mail", "e mail address"],
+   gender: ["gender", "sex"],
+-  dateOfBirth: ["dob", "date of birth", "birth date"],
+-  address: ["address", "full address"],
++  dateOfBirth: ["dob", "date of birth", "birth date", "birthdate"],
++  address: ["address", "full address", "customer address", "patient address"],
+   city: ["city", "town"],
+   state: ["state"],
+-  pincode: ["pincode", "pin code", "zip", "zip code"],
++  pincode: ["pincode", "pin code", "postal code", "zip", "zip code"],
+   lastTest: ["last test", "test", "test name"],
+ };
++const CRM_FIELDS = Object.keys(DEFAULT_HEADER_ALIASES);
++
++// ======================================================
++// Header handling — SHARED ALGORITHM with the frontend preview
++// (frontend/src/utils/importWorkbook.ts). Both sides must produce the same
++// labels so a mapping chosen in the browser matches on the server.
++//
++//  - the header row is the first non-blank row;
++//  - headers are read by POSITION up to the last column that has a header
++//    or any data; blank header cells keep their position and are labelled
++//    "Column <letter>" (e.g. "Column C");
++//  - label = whitespace collapsed + trimmed;
++//  - duplicates (case-insensitive) get " (2)", " (3)" …;
++//  - comparisons use headerKey(): the label lower-cased.
++// ======================================================
++
++function normalizeHeaderText(value) {
++  return String(value ?? "").replace(/\s+/g, " ").trim();
++}
++
++function headerKey(value) {
++  return normalizeHeaderText(value).toLowerCase();
++}
++
++/** headerKey with "_" and "-" read as spaces — used only for alias auto-detect. */
++function aliasKey(value) {
++  return headerKey(value).replace(/[_-]/g, " ").replace(/\s+/g, " ").trim();
++}
+ 
+-function normalizeHeader(header) {
+-  return String(header || "").trim().toLowerCase();
++function buildHeaderLabels(headerRow, width) {
++  const counts = new Map();
++  const labels = [];
++  for (let i = 0; i < width; i += 1) {
++    const base = normalizeHeaderText(headerRow[i]) || `Column ${XLSX.utils.encode_col(i)}`;
++    const key = base.toLowerCase();
++    const n = (counts.get(key) || 0) + 1;
++    counts.set(key, n);
++    labels.push(n > 1 ? `${base} (${n})` : base);
++  }
++  return labels;
++}
++
++function isBlankCell(value) {
++  return value === null || value === undefined || String(value).trim() === "";
+ }
+ 
+ /**
+- * Reads the raw workbook and returns { headers, rows } without applying
+- * any mapping — used so the client can build a "map your columns" UI.
++ * Reads the first worksheet into { headers, rows } where every row is
++ * { rowNumber, values: { [label]: cell } }.
++ *
++ *  - CSV is read with raw:true so values stay exactly as typed (no US-date
++ *    or 9.19E+11 guessing for phone numbers / DD/MM/YYYY dates).
++ *  - XLSX date cells come back as Date objects (cellDates).
++ *  - Completely blank rows are skipped; rowNumber is the spreadsheet row.
+  */
+-function readWorkbookPreview(filePath, { maxRows = 5 } = {}) {
+-  const workbook = XLSX.readFile(filePath);
++function readSheet(filePath) {
++  const isCsv = /\.csv$/i.test(filePath);
++  let workbook;
++  try {
++    workbook = XLSX.readFile(filePath, { cellDates: true, raw: isCsv, dense: true });
++  } catch {
++    throw ApiError.badRequest("The file could not be read as a spreadsheet. Please upload a valid .xlsx, .xls or .csv file.");
++  }
+   const sheetName = workbook.SheetNames[0];
+-  const sheet = workbook.Sheets[sheetName];
+-  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+-  const headers = rows.length ? Object.keys(rows[0]) : [];
+-  return { headers, sampleRows: rows.slice(0, maxRows), totalRows: rows.length };
++  const sheet = sheetName ? workbook.Sheets[sheetName] : null;
++  if (!sheet) throw ApiError.badRequest("The file does not contain any worksheet.");
++
++  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: true, raw: true });
++  // Spreadsheet row of matrix[0]: Excel starts the sheet range at the first used cell.
++  const firstRow = sheet["!ref"] ? XLSX.utils.decode_range(sheet["!ref"]).s.r : 0;
++  const headerIndex = matrix.findIndex((row) => Array.isArray(row) && !row.every(isBlankCell));
++  if (headerIndex === -1) return { headers: [], rows: [] };
++  const headerRow = matrix[headerIndex];
++
++  // Width = last column (by position) with a header or any data.
++  let width = 0;
++  for (let r = headerIndex; r < matrix.length; r += 1) {
++    const row = matrix[r] || [];
++    for (let i = row.length - 1; i >= width; i -= 1) {
++      if (!isBlankCell(row[i])) {
++        width = i + 1;
++        break;
++      }
++    }
++  }
++  const headers = buildHeaderLabels(headerRow, width);
++
++  const rows = [];
++  for (let r = headerIndex + 1; r < matrix.length; r += 1) {
++    const cells = matrix[r] || [];
++    if (cells.every(isBlankCell)) continue;
++    // Null prototype: a header such as "__proto__" stays plain data.
++    const values = Object.create(null);
++    headers.forEach((label, i) => {
++      values[label] = cells[i] ?? "";
++    });
++    rows.push({ rowNumber: firstRow + r + 1, values });
++  }
++  return { headers, rows };
++}
++
++/**
++ * Reads the raw workbook and returns { headers, sampleRows, totalRows }
++ * without applying any mapping — used so the client can build a
++ * "map your columns" UI.
++ */
++function readWorkbookPreview(filePath, { maxRows = 5 } = {}) {
++  const { headers, rows } = readSheet(filePath);
++  return { headers, sampleRows: rows.slice(0, maxRows).map((r) => r.values), totalRows: rows.length };
+ }
+ 
+ /**
+- * Resolves a columnMapping (crmField -> source header) automatically
+- * using DEFAULT_HEADER_ALIASES when an explicit mapping isn't supplied.
++ * Resolves crmField → header label. Explicit mappings are matched
++ * case/space-insensitively (so labels from the new preview AND raw headers
++ * from older clients both work); unknown CRM fields are ignored. A field
++ * sent as null/"" was set to "Not mapped" by the user and is never
++ * auto-detected. Fields absent from the mapping are auto-detected from
++ * DEFAULT_HEADER_ALIASES.
+  */
+ function resolveColumnMapping(headers, explicitMapping = {}) {
+-  const mapping = { ...explicitMapping };
+-  const normalizedHeaders = headers.map((h) => ({ raw: h, normalized: normalizeHeader(h) }));
++  const labelByKey = new Map(headers.map((h) => [h.toLowerCase(), h]));
++  const mapping = {};
++  const warnings = [];
++  const explicit = explicitMapping && typeof explicitMapping === "object" ? explicitMapping : {};
++  const unmapped = new Set();
++
++  for (const field of CRM_FIELDS) {
++    if (!Object.prototype.hasOwnProperty.call(explicit, field)) continue;
++    const wanted = explicit[field];
++    if (wanted === null || wanted === undefined || String(wanted).trim() === "") {
++      unmapped.add(field);
++      continue;
++    }
++    const label = labelByKey.get(headerKey(wanted));
++    if (label) mapping[field] = label;
++    else warnings.push(`Mapped column "${normalizeHeaderText(wanted)}" for ${field} was not found in the file.`);
++  }
+ 
+-  Object.entries(DEFAULT_HEADER_ALIASES).forEach(([crmField, aliases]) => {
+-    if (mapping[crmField]) return; // explicit mapping wins
+-    const match = normalizedHeaders.find((h) => aliases.includes(h.normalized));
+-    if (match) mapping[crmField] = match.raw;
+-  });
++  const keyed = headers.map((label) => ({ label, key: aliasKey(label) }));
++  for (const field of CRM_FIELDS) {
++    if (mapping[field] || unmapped.has(field)) continue;
++    const match = keyed.find((h) => DEFAULT_HEADER_ALIASES[field].includes(h.key));
++    if (match) mapping[field] = match.label;
++  }
++  return { mapping, warnings };
++}
+ 
+-  return mapping;
++// ======================================================
++// Date of birth
++// ======================================================
++
++const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
++const DAY_MS = 86400000;
++
++function utcDate(y, m, d) {
++  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
++  const date = new Date(Date.UTC(y, m - 1, d));
++  // Reject impossible dates such as 31/02/1990 (Date.UTC would roll over).
++  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
++  return date;
++}
++
++function expandYear(y) {
++  if (y >= 100) return y;
++  const currentYY = new Date().getUTCFullYear() % 100;
++  return y > currentYY ? 1900 + y : 2000 + y;
+ }
+ 
+ /**
+- * Processes an uploaded Excel/CSV file of customers in batches.
+- * Designed for ~20,000 rows: streams through in-memory rows but writes
+- * to MongoDB using bulkWrite in chunks so it doesn't block the event
+- * loop for a long single synchronous pass or open 20k individual
+- * connections/queries.
++ * Parses a date-of-birth cell into a UTC-midnight Date.
++ * Accepts: Excel date cells, Excel serial numbers, YYYY-MM-DD (also / or .),
++ * DD/MM/YYYY (Indian day-first; also - or .), "15 Mar 1990" / "15-March-1990".
++ * A month-first date is accepted only when unambiguous (e.g. 3/15/1990).
++ * Rejects impossible dates, years before 1900 and dates in the future.
+  *
+- * Returns a summary: { totalRows, successCount, duplicateCount, invalidCount, skippedCount, errors }
++ * @returns {{ date: Date|null, invalid: boolean }}
+  */
+-async function importCustomersFromFile(filePath, { columnMapping = {}, batchSize = 500 } = {}) {
+-  const workbook = XLSX.readFile(filePath);
+-  const sheetName = workbook.SheetNames[0];
+-  const sheet = workbook.Sheets[sheetName];
+-  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
++function parseDateOfBirth(value) {
++  if (isBlankCell(value)) return { date: null, invalid: false };
++  let date = null;
++
++  if (value instanceof Date) {
++    if (!Number.isNaN(value.getTime())) {
++      // Round to the nearest UTC day: SheetJS gives UTC midnight, but be
++      // robust to a local-midnight Date in any timezone within ±12h.
++      date = new Date(Math.round(value.getTime() / DAY_MS) * DAY_MS);
++    }
++  } else if (typeof value === "number") {
++    if (value >= 1 && value < 2958466) {
++      const p = XLSX.SSF.parse_date_code(value);
++      date = p ? utcDate(p.y, p.m, p.d) : null;
++    }
++  } else {
++    const s = String(value).trim();
++    let m;
++    if ((m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T ].*)?$/))) {
++      date = utcDate(+m[1], +m[2], +m[3]);
++    } else if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/))) {
++      const a = +m[1];
++      const b = +m[2];
++      const y = expandYear(+m[3]);
++      date = utcDate(y, b, a) || (b > 12 && a <= 12 ? utcDate(y, a, b) : null);
++    } else if ((m = s.match(/^(\d{1,2})[-\s]+([A-Za-z]{3,9})[-\s,]+(\d{4})$/))) {
++      const month = MONTHS.indexOf(m[2].slice(0, 3).toLowerCase()) + 1;
++      date = month ? utcDate(+m[3], month, +m[1]) : null;
++    }
++  }
+ 
+-  const headers = rows.length ? Object.keys(rows[0]) : [];
+-  const mapping = resolveColumnMapping(headers, columnMapping);
++  if (!date) return { date: null, invalid: true };
++  const year = date.getUTCFullYear();
++  if (year < 1900 || date.getTime() > Date.now()) return { date: null, invalid: true };
++  return { date, invalid: false };
++}
+ 
+-  if (!mapping.name || !mapping.mobile) {
+-    await fs.unlink(filePath).catch(() => {});
+-    return {
++function displayCell(value) {
++  if (value instanceof Date) return value.toISOString().slice(0, 10);
++  return String(value ?? "").trim();
++}
++
++/**
++ * normalizePhone plus the domestic trunk prefix that spreadsheets often
++ * carry ("09812345678"). Only stripped when the rest is a valid mobile, so
++ * 11-digit landlines (e.g. 020 12345678) are left untouched. Import-only:
++ * the shared normalizePhone is deliberately not changed.
++ */
++function normalizeImportPhone(value) {
++  const digits = normalizePhone(value);
++  if (digits.length === 11 && digits[0] === "0" && isValidIndianMobile(digits.slice(1))) return digits.slice(1);
++  return digits;
++}
++
++// ======================================================
++// Import
++// ======================================================
++
++/**
++ * Imports customers from an uploaded Excel/CSV file.
++ *
++ *  - Validates name + Indian mobile per row (invalid rows are counted, not imported).
++ *  - Duplicate mobiles / WhatsApp numbers — against the database and within
++ *    the file — are counted as duplicates and skipped, so re-uploading the
++ *    same file (e.g. after a dropped connection) never creates duplicates.
++ *  - Date of birth is imported; an unrecognised DOB keeps the row but is
++ *    reported in `warnings` / `dobInvalidCount`.
++ *  - Inserts in batches (ordered:false); rows rejected by a unique index
++ *    (a concurrent insert) are counted in skippedCount.
++ *  - The uploaded temp file is always deleted, on success or failure.
++ *
++ * Returns { totalRows, successCount, duplicateCount, invalidCount,
++ *           skippedCount, dobInvalidCount, errors, warnings, detectedMapping, durationMs }.
++ */
++async function importCustomersFromFile(filePath, { columnMapping = {}, batchSize = 1000 } = {}) {
++  const startedAt = Date.now();
++  try {
++    const { headers, rows } = readSheet(filePath);
++
++    if (rows.length > MAX_IMPORT_ROWS) {
++      throw ApiError.badRequest(
++        `File has ${rows.length} rows; the maximum per import is ${MAX_IMPORT_ROWS.toLocaleString("en-IN")}. Split the file.`
++      );
++    }
++
++    const { mapping, warnings } = resolveColumnMapping(headers, columnMapping);
++    const summary = {
+       totalRows: rows.length,
+       successCount: 0,
+       duplicateCount: 0,
+-      invalidCount: rows.length,
++      invalidCount: 0,
+       skippedCount: 0,
+-      errors: [
+-        "Could not detect required columns (name, mobile). Please provide an explicit columnMapping, e.g. " +
+-          '{"name":"Full Name","mobile":"Phone"}.',
+-      ],
++      dobInvalidCount: 0,
++      errors: [],
++      warnings: warnings.slice(0, MAX_MESSAGES),
+       detectedMapping: mapping,
++      durationMs: 0,
+     };
+-  }
++    const pushError = (msg) => summary.errors.length < MAX_MESSAGES && summary.errors.push(msg);
++    const pushWarning = (msg) => summary.warnings.length < MAX_MESSAGES && summary.warnings.push(msg);
+ 
+-  const summary = {
+-    totalRows: rows.length,
+-    successCount: 0,
+-    duplicateCount: 0,
+-    invalidCount: 0,
+-    skippedCount: 0,
+-    errors: [],
+-    detectedMapping: mapping,
+-  };
+-
+-  // Pre-load existing mobile numbers once (fast lookups) rather than a
+-  // query per row, which would be extremely slow at 20k rows.
+-  const existingMobiles = new Set(await Customer.distinct("mobile"));
+-
+-  const validDocs = [];
+-  const seenInFileMobiles = new Set();
+-
+-  for (let i = 0; i < rows.length; i += 1) {
+-    const row = rows[i];
+-    const name = String(row[mapping.name] || "").trim();
+-    const rawMobile = row[mapping.mobile];
+-    const mobile = normalizePhone(rawMobile);
+-
+-    if (!name || !mobile || !isValidIndianMobile(mobile)) {
+-      summary.invalidCount += 1;
+-      if (summary.errors.length < 50) {
+-        summary.errors.push(`Row ${i + 2}: invalid or missing name/mobile ("${name}" / "${rawMobile}")`);
+-      }
+-      continue;
++    if (!mapping.name || !mapping.mobile) {
++      summary.invalidCount = rows.length;
++      summary.errors.push(
++        "Could not detect required columns (name, mobile). Please map them explicitly, e.g. " +
++          '{"name":"Full Name","mobile":"Phone"}.'
++      );
++      summary.durationMs = Date.now() - startedAt;
++      return summary;
+     }
+ 
+-    if (existingMobiles.has(mobile) || seenInFileMobiles.has(mobile)) {
+-      summary.duplicateCount += 1;
+-      continue;
+-    }
+-    seenInFileMobiles.add(mobile);
++    // Load existing keys once (fast Set lookups) instead of a query per row.
++    const [existingMobileList, existingWhatsappList] = await Promise.all([
++      Customer.distinct("mobile"),
++      Customer.distinct("whatsappNumber"),
++    ]);
++    const existingMobiles = new Set(existingMobileList);
++    const existingWhatsapp = new Set(existingWhatsappList.filter(Boolean));
++    const seenMobiles = new Set();
++    const seenWhatsapp = new Set();
++
++    const text = (row, field) => (mapping[field] ? displayCell(row.values[mapping[field]]) : "");
++    const validDocs = [];
++
++    for (const row of rows) {
++      const name = text(row, "name");
++      const rawMobile = row.values[mapping.mobile];
++      const mobile = normalizeImportPhone(displayCell(rawMobile));
++
++      if (!name || !mobile || !isValidIndianMobile(mobile)) {
++        summary.invalidCount += 1;
++        pushError(`Row ${row.rowNumber}: invalid or missing name/mobile ("${name}" / "${displayCell(rawMobile)}")`);
++        continue;
++      }
+ 
+-    validDocs.push({
+-      customerId: generateId("CUS"),
+-      name,
+-      mobile,
+-      whatsappNumber: mapping.whatsappNumber ? normalizePhone(row[mapping.whatsappNumber]) : "",
+-      email: mapping.email ? String(row[mapping.email] || "").trim().toLowerCase() : "",
+-      gender: mapping.gender ? normalizeGender(row[mapping.gender]) : "",
+-      address: mapping.address ? String(row[mapping.address] || "").trim() : "",
+-      city: mapping.city ? String(row[mapping.city] || "").trim() : "",
+-      state: mapping.state ? String(row[mapping.state] || "").trim() : "",
+-      pincode: mapping.pincode ? String(row[mapping.pincode] || "").trim() : "",
+-      lastTest: mapping.lastTest ? String(row[mapping.lastTest] || "").trim() : "",
+-      source: "import",
+-      status: "active",
+-    });
+-  }
++      const whatsappNumber = mapping.whatsappNumber ? normalizeImportPhone(text(row, "whatsappNumber")) : "";
++      if (existingMobiles.has(mobile) || seenMobiles.has(mobile)) {
++        summary.duplicateCount += 1;
++        continue;
++      }
++      if (whatsappNumber && (existingWhatsapp.has(whatsappNumber) || seenWhatsapp.has(whatsappNumber))) {
++        summary.duplicateCount += 1;
++        pushWarning(`Row ${row.rowNumber}: WhatsApp number already belongs to another customer; row skipped.`);
++        continue;
++      }
++      seenMobiles.add(mobile);
++      if (whatsappNumber) seenWhatsapp.add(whatsappNumber);
+ 
+-  // Insert in batches to avoid one massive 20k-document insert call.
+-  for (let i = 0; i < validDocs.length; i += batchSize) {
+-    const batch = validDocs.slice(i, i + batchSize);
+-    try {
+-      const inserted = await Customer.insertMany(batch, { ordered: false });
+-      summary.successCount += inserted.length;
+-    } catch (err) {
+-      // insertMany with ordered:false still inserts non-conflicting docs
+-      // and reports how many succeeded via err.insertedDocs / result.
+-      const insertedCount = err.insertedDocs ? err.insertedDocs.length : 0;
+-      summary.successCount += insertedCount;
+-      summary.skippedCount += batch.length - insertedCount;
+-      if (summary.errors.length < 50) {
+-        summary.errors.push(`Batch starting at row ${i + 2}: ${err.message}`);
++      let dateOfBirth = null;
++      if (mapping.dateOfBirth) {
++        const raw = row.values[mapping.dateOfBirth];
++        const dob = parseDateOfBirth(raw);
++        if (dob.invalid) {
++          summary.dobInvalidCount += 1;
++          pushWarning(
++            `Row ${row.rowNumber}: date of birth "${displayCell(raw)}" not recognised (use DD/MM/YYYY or YYYY-MM-DD); imported without it.`
++          );
++        }
++        dateOfBirth = dob.date;
+       }
++
++      validDocs.push({
++        customerId: generateId("CUS"),
++        name,
++        mobile,
++        whatsappNumber,
++        email: text(row, "email").toLowerCase(),
++        gender: mapping.gender ? normalizeGender(text(row, "gender")) : "",
++        dateOfBirth,
++        address: text(row, "address"),
++        city: text(row, "city"),
++        state: text(row, "state"),
++        pincode: text(row, "pincode"),
++        lastTest: text(row, "lastTest"),
++        source: "import",
++        status: "active",
++      });
+     }
+-  }
+ 
+-  await fs.unlink(filePath).catch(() => {});
+-  return summary;
++    // Insert in batches to avoid one massive insert call.
++    for (let i = 0; i < validDocs.length; i += batchSize) {
++      const batch = validDocs.slice(i, i + batchSize);
++      try {
++        const inserted = await Customer.insertMany(batch, { ordered: false });
++        summary.successCount += inserted.length;
++      } catch (err) {
++        // ordered:false still inserts the non-conflicting documents.
++        const insertedCount = err.insertedDocs ? err.insertedDocs.length : 0;
++        summary.successCount += insertedCount;
++        summary.skippedCount += batch.length - insertedCount;
++        pushError(
++          `Batch of ${batch.length} rows: ${batch.length - insertedCount} not inserted (${
++            err.code === 11000 ? "already exists" : err.message
++          }).`
++        );
++      }
++    }
++
++    summary.durationMs = Date.now() - startedAt;
++    return summary;
++  } finally {
++    await fs.unlink(filePath).catch(() => {});
++  }
+ }
+ 
+ function normalizeGender(value) {
+@@ -187,6 +433,7 @@
+     WhatsApp: c.whatsappNumber,
+     Email: c.email,
+     Gender: c.gender,
++    "Date of Birth": c.dateOfBirth ? new Date(c.dateOfBirth).toISOString().slice(0, 10) : "",
+     City: c.city,
+     State: c.state,
+     Pincode: c.pincode,
+@@ -199,7 +446,6 @@
+     "Marketing Opt-In": c.marketingOptIn ? "Yes" : "No",
+     "Created At": c.createdAt ? new Date(c.createdAt).toISOString().slice(0, 10) : "",
+   }));
+-
+   const worksheet = XLSX.utils.json_to_sheet(rows);
+   const workbook = XLSX.utils.book_new();
+   XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
+@@ -207,8 +453,16 @@
+ }
+ 
+ module.exports = {
++  MAX_IMPORT_ROWS,
++  DEFAULT_HEADER_ALIASES,
++  normalizeHeaderText,
++  headerKey,
++  buildHeaderLabels,
++  aliasKey,
+   readWorkbookPreview,
+   resolveColumnMapping,
++  parseDateOfBirth,
++  normalizeImportPhone,
+   importCustomersFromFile,
+   buildCustomerExportBuffer,
+ };
+--- /dev/null
++++ b/tests/cloudinary.unit.test.js
+@@ -0,0 +1,93 @@
++/**
++ * services/cloudinary.service.js — real service logic, no network.
++ * FAKE credentials only; cloudinary.uploader.upload is mocked, and
++ * private_download_url only computes a signature locally.
++ */
++require("./helpers/setup");
++const { test, describe, mock, afterEach } = require("node:test");
++const assert = require("node:assert/strict");
++const fs = require("node:fs");
++const os = require("node:os");
++const path = require("node:path");
++
++const FAKE_SECRET = "fake_cloudinary_secret_for_tests_0000";
++
++function freshService(configured) {
++  Object.assign(process.env, {
++    CLOUDINARY_CLOUD_NAME: configured ? "fake-cloud" : "",
++    CLOUDINARY_API_KEY: configured ? "000000000000000" : "",
++    CLOUDINARY_API_SECRET: configured ? FAKE_SECRET : "",
++  });
++  for (const k of Object.keys(require.cache)) {
++    if (/[\\/]src[\\/](config[\\/](env|cloudinary)|services[\\/]cloudinary\.service)\.js$/.test(k)) delete require.cache[k];
++  }
++  const svc = require("../src/services/cloudinary.service");
++  const { cloudinary } = require("../src/config/cloudinary");
++  return { svc, cloudinary };
++}
++
++function tempFile() {
++  const p = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cld-")), "report.pdf");
++  fs.writeFileSync(p, "%PDF-1.4 synthetic");
++  return p;
++}
++const gone = async (p) => {
++  for (let i = 0; i < 50 && fs.existsSync(p); i += 1) await new Promise((r) => setTimeout(r, 10));
++  return !fs.existsSync(p);
++};
++
++afterEach(() => mock.restoreAll());
++
++describe("Cloudinary service (configured with fake credentials)", () => {
++  test("upload: authenticated delivery by default, mapped result, temp file removed", async () => {
++    const { svc, cloudinary } = freshService(true);
++    const calls = [];
++    mock.method(cloudinary.uploader, "upload", async (p, opts) => {
++      calls.push(opts);
++      return { secure_url: "https://res.example.test/x", public_id: "nakul/reports/x", resource_type: "image", type: "authenticated", format: "pdf" };
++    });
++    const p = tempFile();
++    const out = await svc.uploadFile(p, "nakul/reports");
++    assert.deepEqual(calls[0], { folder: "nakul/reports", resource_type: "auto", type: "authenticated" });
++    assert.deepEqual(out, { url: "https://res.example.test/x", publicId: "nakul/reports/x", resourceType: "image", deliveryType: "authenticated", format: "pdf" });
++    assert.ok(await gone(p), "temp file deleted after success");
++  });
++
++  test("upload failure: error propagates and the temp file is still removed", async () => {
++    const { svc, cloudinary } = freshService(true);
++    mock.method(cloudinary.uploader, "upload", async () => {
++      throw new Error("network down");
++    });
++    const p = tempFile();
++    await assert.rejects(svc.uploadFile(p), /network down/);
++    assert.ok(await gone(p), "temp file deleted after failure");
++  });
++
++  test("signed download URL: short expiry, signed, never contains the API secret", () => {
++    const { svc } = freshService(true);
++    const before = Math.floor(Date.now() / 1000);
++    const url = svc.generateSignedDownloadUrl({ publicId: "nakul/reports/x", format: "pdf" });
++    const u = new URL(url);
++    const exp = Number(u.searchParams.get("expires_at"));
++    assert.ok(exp >= before + 299 && exp <= before + 302, `expires_at ${exp}`);
++    assert.ok(u.searchParams.get("signature"), "signed");
++    assert.equal(u.searchParams.get("type"), "authenticated");
++    assert.ok(!url.includes(FAKE_SECRET), "secret never in the URL");
++    assert.equal(svc.generateSignedDownloadUrl({ publicId: "" }), "", "no public id → no URL");
++    const longer = new URL(svc.generateSignedDownloadUrl({ publicId: "a", expiresInSeconds: 60 }));
++    assert.ok(Number(longer.searchParams.get("expires_at")) <= before + 62);
++  });
++});
++
++describe("Cloudinary service (not configured)", () => {
++  test("upload gives a clear error without calling Cloudinary; signed URL is empty; delete is a no-op", async () => {
++    const { svc, cloudinary } = freshService(false);
++    const upload = mock.method(cloudinary.uploader, "upload", async () => ({}));
++    const destroy = mock.method(cloudinary.uploader, "destroy", async () => ({}));
++    await assert.rejects(svc.uploadFile(tempFile()), /not configured/);
++    assert.equal(upload.mock.callCount(), 0);
++    assert.equal(svc.generateSignedDownloadUrl({ publicId: "x" }), "");
++    await svc.deleteFile("x");
++    assert.equal(destroy.mock.callCount(), 0);
++  });
++});
+--- a/tests/core.db.test.js
++++ b/tests/core.db.test.js
+@@ -18,7 +18,7 @@
+  * mongodb-memory-server availability / skip policy: see helpers/memoryDb.js.
+  */
+ // Isolation, version pinning and the skip/fail policy live in helpers/memoryDb.js.
+-const { dbSuite, env, getMongoMemoryServer } = require("./helpers/memoryDb");
++const { dbSuite, env, getMongoMemoryServer, LAUNCH_OPTIONS } = require("./helpers/memoryDb");
+ 
+ const { describe, test, before, after, mock } = require("node:test");
+ const assert = require("node:assert/strict");
+@@ -64,7 +64,7 @@
+   }
+ 
+   before(async () => {
+-    mongod = await getMongoMemoryServer().create();
++    mongod = await getMongoMemoryServer().create(LAUNCH_OPTIONS);
+     const uri = mongod.getUri();
+     const host = new URL(uri).hostname;
+     assert.ok(host === "127.0.0.1" || host === "localhost", "refusing to connect to a non-loopback database");
+@@ -479,7 +479,9 @@
+       assert.equal(partial.body.data.source, "other");
+       pending = await models.FollowUp.find({ lead: ids.lead, status: "pending" });
+       assert.equal(pending.length, 1, "unrelated update keeps follow-ups");
+-      await staff("PATCH", `/api/v1/leads/${ids.lead}`, { body: { nextFollowUpDate: "" } });
++      const cleared = await staff("PATCH", `/api/v1/leads/${ids.lead}`, { body: { nextFollowUpDate: "" } });
++      assert.equal(cleared.body.data.notes, "called", "an unrelated update keeps the lead notes");
++      assert.equal(cleared.body.data.status, "interested");
+       pending = await models.FollowUp.find({ lead: ids.lead, status: "pending" });
+       assert.equal(pending.length, 0);
+       assert.equal((await staff("PATCH", "/api/v1/leads/65c000000000000000000fff", { body: { notes: "x" } })).status, 404);
+--- /dev/null
++++ b/tests/customerImport.db.test.js
+@@ -0,0 +1,353 @@
++/**
++ * Customer import / export through the real HTTP endpoints, against an
++ * isolated in-memory MongoDB (see helpers/memoryDb.js). All data is synthetic.
++ *
++ * Covers: blank-header preservation, header normalisation, DOB parsing and
++ * persistence, blank rows, explicit column mapping (incl. "Column B" labels),
++ * invalid / duplicate rows, temp-file cleanup on every path, one-import-at-a-
++ * time 409, the row cap, and a 20,000-row XLSX import → export → CSV re-import.
++ */
++const { dbSuite, startDbApp } = require("./helpers/memoryDb");
++const { test, before, after, describe, mock } = require("node:test");
++const assert = require("node:assert/strict");
++const fsSync = require("node:fs");
++const fs = require("node:fs/promises");
++const path = require("node:path");
++const XLSX = require("xlsx");
++
++const UPLOADS = path.join(__dirname, "..", "uploads");
++const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
++
++const uploadsFiles = () => fsSync.readdirSync(UPLOADS).filter((f) => f !== ".gitkeep");
++
++function xlsxBuffer(aoa) {
++  const ws = XLSX.utils.aoa_to_sheet(aoa, { cellDates: true });
++  const wb = XLSX.utils.book_new();
++  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
++  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
++}
++
++function form(buffer, { name = "customers.xlsx", type = XLSX_MIME, fields = {} } = {}) {
++  const f = new FormData();
++  Object.entries(fields).forEach(([k, v]) => f.append(k, v));
++  f.append("file", new Blob([buffer], { type }), name);
++  return f;
++}
++
++const csvBuffer = (lines) => Buffer.from(lines.join("\r\n"), "utf8");
++const mobileFor = (i) => `9${String(i).padStart(9, "0")}`;
++
++dbSuite("Customer import/export endpoints (isolated in-memory MongoDB)", () => {
++  let h;
++  let Customer;
++  const tokens = {};
++  const as = (who) => (m, p, o = {}) => h.api(m, p, { ...o, token: tokens[who] });
++  let staff;
++  let baselineUploads;
++
++  before(async () => {
++    h = await startDbApp();
++    const User = require("../src/models/User");
++    Customer = require("../src/models/Customer");
++    await Promise.all([User.init(), Customer.init()]);
++    await User.create({ name: "Staff One", email: "staff@test.local", password: "StaffPass123", role: "staff" });
++    const r = await h.api("POST", "/api/v1/auth/login", { body: { email: "staff@test.local", password: "StaffPass123" } });
++    assert.equal(r.status, 200);
++    tokens.staff = r.body.data.token;
++    staff = as("staff");
++    baselineUploads = uploadsFiles();
++  });
++
++  after(async () => {
++    mock.restoreAll();
++    if (h) await h.stop();
++  });
++
++  const assertUploadsClean = () => assert.deepEqual(uploadsFiles(), baselineUploads, "temp upload files must be deleted");
++
++  describe("small synthetic files", () => {
++    before(async () => {
++      await Customer.deleteMany({});
++      await Customer.create({ customerId: "CUS-EXIST-1", name: "Existing", mobile: "9800000001", whatsappNumber: "9800000099" });
++    });
++
++    const SHEET = [
++      ["  Full   Name ", "", "Phone", "Date of Birth", "City", "WhatsApp"],
++      ["Asha Verma", "note-a", "98765 43210", new Date(Date.UTC(1990, 2, 15)), "Pune", ""],
++      ["", "", "", "", "", ""], // blank row — skipped, not counted
++      ["Ravi Kumar", "note-b", "+91 9876543211", "05/03/1985", "Delhi", ""],
++      ["Bad Phone", "", "12345", "", "", ""], // invalid mobile
++      ["No Name", "", "", "", "", ""], // invalid (name only, no mobile)
++      ["Asha Again", "", "9876543210", "", "", ""], // duplicate within file
++      ["Exists In DB", "", "9800000001", "", "", ""], // duplicate in DB
++      ["WA Clash", "", "9876543212", "", "", "9800000099"], // whatsapp already used
++      ["Bad Dob", "", "9876543213", "31/02/1990", "", ""], // imported without DOB
++    ];
++
++    test("preview keeps blank headers by position, normalises spacing, skips blank rows", async () => {
++      const res = await staff("POST", "/api/v1/customers/import/preview", { form: form(xlsxBuffer(SHEET)) });
++      assert.equal(res.status, 200, res.text);
++      assert.deepEqual(res.body.data.headers, ["Full Name", "Column B", "Phone", "Date of Birth", "City", "WhatsApp"]);
++      assert.equal(res.body.data.totalRows, SHEET.length - 2, "header and the blank row are not data rows");
++      assert.equal(res.body.data.sampleRows[0]["Column B"], "note-a");
++      assertUploadsClean();
++    });
++
++    test("XLSX import: counts, DOB persistence, duplicates/invalid handled, temp file removed", async () => {
++      const res = await staff("POST", "/api/v1/customers/import", { form: form(xlsxBuffer(SHEET)) });
++      assert.equal(res.status, 200, res.text);
++      const s = res.body.data;
++      assert.equal(s.totalRows, 8);
++      assert.equal(s.successCount, 3, JSON.stringify(s));
++      assert.equal(s.invalidCount, 2);
++      assert.equal(s.duplicateCount, 3);
++      assert.equal(s.skippedCount, 0);
++      assert.equal(s.dobInvalidCount, 1);
++      assert.equal(s.detectedMapping.name, "Full Name");
++      assert.equal(s.detectedMapping.dateOfBirth, "Date of Birth");
++      assert.ok(s.errors.some((e) => /^Row 5:/.test(e)), "row numbers are spreadsheet rows (blank row counted)");
++      assert.ok(s.warnings.some((w) => /Row 10: date of birth "31\/02\/1990"/.test(w)));
++      assert.ok(s.warnings.some((w) => /Row 9: WhatsApp number/.test(w)));
++      assert.equal(typeof s.durationMs, "number");
++
++      const asha = await Customer.findOne({ mobile: "9876543210" }).lean();
++      assert.equal(asha.name, "Asha Verma");
++      assert.equal(asha.dateOfBirth.toISOString(), "1990-03-15T00:00:00.000Z");
++      assert.equal(asha.city, "Pune");
++      assert.equal(asha.source, "import");
++      const ravi = await Customer.findOne({ mobile: "9876543211" }).lean();
++      assert.equal(ravi.dateOfBirth.toISOString(), "1985-03-05T00:00:00.000Z", "DD/MM/YYYY is day-first");
++      const bad = await Customer.findOne({ mobile: "9876543213" }).lean();
++      assert.equal(bad.dateOfBirth, null);
++      assertUploadsClean();
++    });
++
++    test("re-uploading the same file creates nothing (idempotent)", async () => {
++      const before = await Customer.countDocuments();
++      const res = await staff("POST", "/api/v1/customers/import", { form: form(xlsxBuffer(SHEET)) });
++      assert.equal(res.status, 200);
++      assert.equal(res.body.data.successCount, 0);
++      assert.equal(await Customer.countDocuments(), before);
++      assertUploadsClean();
++    });
++
++    test("CSV import with an explicit mapping onto a blank-header column and messy header spacing", async () => {
++      const csv = csvBuffer([
++        "Patient  Name,,Contact No,DOB",
++        "Meena Shah,Nashik,919812345670,1979-12-01",
++        ",,,",
++        "Kiran Rao,Thane,09812345671,15-Mar-1992",
++      ]);
++      const mapping = { name: "patient name", mobile: "Contact No", city: "Column B", dateOfBirth: "DOB", bogus: "x" };
++      const res = await staff("POST", "/api/v1/customers/import", {
++        form: form(csv, { name: "c.csv", type: "text/csv", fields: { columnMapping: JSON.stringify(mapping) } }),
++      });
++      assert.equal(res.status, 200, res.text);
++      assert.equal(res.body.data.totalRows, 2);
++      assert.equal(res.body.data.successCount, 2, JSON.stringify(res.body.data));
++      assert.deepEqual(res.body.data.warnings, []);
++      const meena = await Customer.findOne({ mobile: "9812345670" }).lean();
++      assert.equal(meena.city, "Nashik");
++      assert.equal(meena.dateOfBirth.toISOString().slice(0, 10), "1979-12-01");
++      const kiran = await Customer.findOne({ name: "Kiran Rao" }).lean();
++      assert.ok(kiran, "leading-zero mobile in CSV kept as text and normalised");
++      assert.equal(kiran.dateOfBirth.toISOString().slice(0, 10), "1992-03-15");
++      assertUploadsClean();
++    });
++
++    test("a mapped column that is not in the file is reported as a warning", async () => {
++      const csv = csvBuffer(["Name,Mobile", "Late Comer,9812345679"]);
++      const res = await staff("POST", "/api/v1/customers/import", {
++        form: form(csv, { name: "c.csv", type: "text/csv", fields: { columnMapping: JSON.stringify({ dateOfBirth: "Birthday" }) } }),
++      });
++      assert.equal(res.status, 200);
++      assert.equal(res.body.data.successCount, 1);
++      assert.match(res.body.data.warnings[0], /Birthday/);
++      assertUploadsClean();
++    });
++
++    test("missing required columns → 200 summary with every row invalid; temp file removed", async () => {
++      const csv = csvBuffer(["Foo,Bar", "a,b", "c,d"]);
++      const res = await staff("POST", "/api/v1/customers/import", { form: form(csv, { name: "c.csv", type: "text/csv" }) });
++      assert.equal(res.status, 200);
++      assert.equal(res.body.data.invalidCount, 2);
++      assert.equal(res.body.data.successCount, 0);
++      assert.match(res.body.data.errors[0], /required columns/);
++      assertUploadsClean();
++    });
++
++    test("invalid columnMapping (bad JSON / array / scalar) → 400 and temp file removed", async () => {
++      for (const bad of ["{not json", "[]", "\"name\"", "null"]) {
++        const res = await staff("POST", "/api/v1/customers/import", { form: form(xlsxBuffer(SHEET), { fields: { columnMapping: bad } }) });
++        assert.equal(res.status, 400, `columnMapping=${bad}`);
++        assertUploadsClean();
++      }
++    });
++
++    test("corrupt workbook → 400, temp file removed", async () => {
++      const res = await staff("POST", "/api/v1/customers/import", { form: form(Buffer.from("PK\u0003\u0004 definitely not a zip")) });
++      assert.equal(res.status, 400);
++      assert.match(res.body.message, /could not be read/);
++      assertUploadsClean();
++      const prev = await staff("POST", "/api/v1/customers/import/preview", { form: form(Buffer.from("PK\u0003\u0004 nope")) });
++      assert.equal(prev.status, 400);
++      assertUploadsClean();
++    });
++
++    test("'Not mapped' (null) is honoured end-to-end; leading blank rows keep real row numbers", async () => {
++      const aoa = [[], [], ["Name", "Mobile", "City"], ["Null City", "9812300001", "Surat"], ["Broken", "123", "Surat"]];
++      const res = await staff("POST", "/api/v1/customers/import", {
++        form: form(xlsxBuffer(aoa), { fields: { columnMapping: JSON.stringify({ name: "Name", mobile: "Mobile", city: null }) } }),
++      });
++      assert.equal(res.status, 200, res.text);
++      assert.equal(res.body.data.successCount, 1);
++      assert.equal(res.body.data.detectedMapping.city, undefined);
++      assert.match(res.body.data.errors[0], /^Row 5:/, "header on spreadsheet row 3 → bad row is row 5");
++      const c = await Customer.findOne({ mobile: "9812300001" }).lean();
++      assert.equal(c.city, "", "city column was deliberately not imported");
++      assertUploadsClean();
++    });
++
++    test("an empty sheet imports nothing", async () => {
++      const res = await staff("POST", "/api/v1/customers/import", { form: form(csvBuffer(["Name,Mobile"]), { name: "e.csv", type: "text/csv" }) });
++      assert.equal(res.status, 200);
++      assert.equal(res.body.data.totalRows, 0);
++      assert.equal(res.body.data.successCount, 0);
++      assertUploadsClean();
++    });
++
++    test("export includes the Date of Birth column", async () => {
++      const res = await h.api("GET", "/api/v1/customers/export", { token: tokens.staff });
++      assert.equal(res.status, 200);
++      const exp = await fetch(`${h.base}/api/v1/customers/export`, { headers: { Authorization: `Bearer ${tokens.staff}` } });
++      const wb = XLSX.read(Buffer.from(await exp.arrayBuffer()), { type: "buffer" });
++      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
++      const asha = rows.find((r) => String(r.Mobile) === "9876543210");
++      assert.equal(asha["Date of Birth"], "1990-03-15");
++    });
++  });
++
++  describe("one import at a time", () => {
++    const excelService = require("../src/services/excel.service");
++
++    test("a second import while one is running → 409; the lock is released after success and after failure", async () => {
++      let release;
++      let started;
++      const startedP = new Promise((r) => (started = r));
++      const gate = new Promise((r) => (release = r));
++      const m = mock.method(excelService, "importCustomersFromFile", async (filePath) => {
++        started();
++        await gate;
++        await fs.unlink(filePath).catch(() => {});
++        return { totalRows: 0, successCount: 0, duplicateCount: 0, invalidCount: 0, skippedCount: 0, durationMs: 0 };
++      });
++      try {
++        const csv = csvBuffer(["Name,Mobile", "X,9812340000"]);
++        const first = staff("POST", "/api/v1/customers/import", { form: form(csv, { name: "a.csv", type: "text/csv" }) });
++        await startedP;
++        const second = await staff("POST", "/api/v1/customers/import", { form: form(csv, { name: "b.csv", type: "text/csv" }) });
++        assert.equal(second.status, 409);
++        assert.match(second.body.message, /already running/);
++        release();
++        assert.equal((await first).status, 200);
++        assertUploadsClean();
++
++        // released after success
++        assert.equal((await staff("POST", "/api/v1/customers/import", { form: form(csv, { name: "c.csv", type: "text/csv" }) })).status, 200);
++
++        // released after a failure inside the import
++        m.mock.mockImplementation(async (filePath) => {
++          await fs.unlink(filePath).catch(() => {});
++          throw new Error("boom");
++        });
++        assert.equal((await staff("POST", "/api/v1/customers/import", { form: form(csv, { name: "d.csv", type: "text/csv" }) })).status, 500);
++        m.mock.restore();
++        const ok = await staff("POST", "/api/v1/customers/import", { form: form(csv, { name: "e.csv", type: "text/csv" }) });
++        assert.equal(ok.status, 200, "lock released after the failed import");
++        assertUploadsClean();
++      } finally {
++        m.mock.restore();
++      }
++    });
++  });
++
++  describe("upload size limits", () => {
++    test("spreadsheet over 15 MB → 400 'File too large', nothing kept on disk", async () => {
++      const big = Buffer.alloc(15 * 1024 * 1024 + 10, 0x41);
++      const res = await staff("POST", "/api/v1/customers/import", { form: form(big, { name: "big.csv", type: "text/csv" }) });
++      assert.equal(res.status, 400);
++      assert.match(res.body.message, /File too large/i);
++      assertUploadsClean();
++    });
++
++    test("public prescription over 10 MB → 400; missing patient details → 400; nothing kept on disk", async () => {
++      const big = Buffer.alloc(10 * 1024 * 1024 + 10, 0x41);
++      const tooBig = await h.api("POST", "/api/v1/public/prescriptions", {
++        form: form(big, { name: "rx.pdf", type: "application/pdf", fields: { name: "Web Patient", mobile: "9000000400" } }),
++      });
++      assert.equal(tooBig.status, 400);
++      assert.match(tooBig.body.message, /File too large/i);
++      const noDetails = await h.api("POST", "/api/v1/public/prescriptions", { form: form(Buffer.from("%PDF-1.4"), { name: "rx.pdf", type: "application/pdf" }) });
++      assert.equal(noDetails.status, 400);
++      assertUploadsClean();
++    });
++  });
++
++  describe("large files", () => {
++    test("more than 50,000 data rows → 400, temp file removed, nothing inserted", async () => {
++      const before = await Customer.countDocuments();
++      const lines = ["Name,Mobile"];
++      for (let i = 0; i < 50001; i += 1) lines.push(`P${i},${mobileFor(500000 + i)}`);
++      const res = await staff("POST", "/api/v1/customers/import", { form: form(csvBuffer(lines), { name: "big.csv", type: "text/csv" }) });
++      assert.equal(res.status, 400);
++      assert.match(res.body.message, /maximum per import/);
++      assert.equal(await Customer.countDocuments(), before);
++      assertUploadsClean();
++    });
++
++    test("20,000-row XLSX import → export → CSV re-import of the same rows", { timeout: 300000 }, async () => {
++      await Customer.deleteMany({});
++      const N = 20000;
++      const aoa = [["Name", "Mobile", "", "Date of Birth", "City"]];
++      for (let i = 0; i < N; i += 1) {
++        aoa.push([`Customer ${i}`, mobileFor(i), `x${i}`, `${String((i % 28) + 1).padStart(2, "0")}/0${(i % 9) + 1}/19${50 + (i % 50)}`, "Pune"]);
++      }
++
++      let t = Date.now();
++      const imp = await staff("POST", "/api/v1/customers/import", { form: form(xlsxBuffer(aoa)) });
++      const importMs = Date.now() - t;
++      assert.equal(imp.status, 200, imp.text);
++      assert.equal(imp.body.data.totalRows, N);
++      assert.equal(imp.body.data.successCount, N, JSON.stringify({ ...imp.body.data, errors: imp.body.data.errors.slice(0, 3) }));
++      assert.equal(imp.body.data.invalidCount + imp.body.data.duplicateCount + imp.body.data.skippedCount + imp.body.data.dobInvalidCount, 0);
++      assert.equal(await Customer.countDocuments(), N);
++      assert.equal(await Customer.countDocuments({ dateOfBirth: { $ne: null } }), N);
++      assertUploadsClean();
++
++      t = Date.now();
++      const exp = await fetch(`${h.base}/api/v1/customers/export`, { headers: { Authorization: `Bearer ${tokens.staff}` } });
++      assert.equal(exp.status, 200);
++      const wb = XLSX.read(Buffer.from(await exp.arrayBuffer()), { type: "buffer" });
++      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "", raw: false });
++      const exportMs = Date.now() - t;
++      assert.equal(rows.length, N);
++      assert.equal(new Set(rows.map((r) => String(r.Mobile))).size, N);
++      const r7 = rows.find((r) => String(r.Mobile) === mobileFor(7));
++      assert.equal(r7["Date of Birth"], "1957-08-08");
++
++      // Re-import the exported rows as CSV: every row is a duplicate.
++      const csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
++      t = Date.now();
++      const re = await staff("POST", "/api/v1/customers/import", { form: form(Buffer.from(csv), { name: "export.csv", type: "text/csv" }) });
++      const reimportMs = Date.now() - t;
++      assert.equal(re.status, 200, re.text);
++      assert.equal(re.body.data.totalRows, N);
++      assert.equal(re.body.data.duplicateCount, N);
++      assert.equal(re.body.data.successCount, 0);
++      assert.equal(await Customer.countDocuments(), N);
++      assertUploadsClean();
++
++      console.log(`[20k] xlsx import ${importMs} ms · export ${exportMs} ms · csv re-import ${reimportMs} ms`);
++    });
++  });
++});
+--- /dev/null
++++ b/tests/customerImport.unit.test.js
+@@ -0,0 +1,193 @@
++/**
++ * Customer import: header algorithm (shared with the frontend preview) and
++ * date-of-birth parsing. Pure functions — no database.
++ */
++require("./helpers/setup");
++const { test, describe } = require("node:test");
++const assert = require("node:assert/strict");
++const XLSX = require("xlsx");
++const {
++  buildHeaderLabels,
++  aliasKey,
++  readWorkbookPreview,
++  DEFAULT_HEADER_ALIASES,
++  headerKey,
++  resolveColumnMapping,
++  parseDateOfBirth,
++  normalizeImportPhone,
++} = require("../src/services/excel.service");
++
++const iso = (r) => (r.date ? r.date.toISOString().slice(0, 10) : null);
++
++describe("Import header labels (shared algorithm)", () => {
++  test("blank header cells keep their position and get a column-letter label", () => {
++    assert.deepEqual(buildHeaderLabels(["Name", "", "Phone", null, "City"], 5), ["Name", "Column B", "Phone", "Column D", "City"]);
++    assert.deepEqual(buildHeaderLabels(["Name"], 3), ["Name", "Column B", "Column C"], "data wider than the header row");
++  });
++
++  test("whitespace is collapsed/trimmed; duplicates (case-insensitive) are suffixed", () => {
++    assert.deepEqual(buildHeaderLabels(["  Full   Name ", "\tPhone\n"], 2), ["Full Name", "Phone"]);
++    assert.deepEqual(buildHeaderLabels(["Name", "name", "NAME"], 3), ["Name", "name (2)", "NAME (3)"]);
++  });
++
++  test("headerKey ignores case and spacing", () => {
++    assert.equal(headerKey("  Full   NAME "), "full name");
++  });
++
++  test("mapping: explicit labels and legacy raw headers resolve case/space-insensitively; unknown fields ignored", () => {
++    const headers = buildHeaderLabels(["Patient  Name", "", "Contact No", "D.O.B"], 4);
++    const { mapping, warnings } = resolveColumnMapping(headers, {
++      name: "patient name",
++      mobile: "  CONTACT   NO ",
++      dateOfBirth: "D.O.B",
++      __proto__: "x",
++      isAdmin: "Column B",
++    });
++    assert.deepEqual(mapping, { name: "Patient Name", mobile: "Contact No", dateOfBirth: "D.O.B" });
++    assert.deepEqual(warnings, []);
++    assert.equal({}.isAdmin, undefined);
++  });
++
++  test("mapping: a mapped column missing from the file is reported and auto-detect still applies", () => {
++    const { mapping, warnings } = resolveColumnMapping(["Name", "Mobile"], { mobile: "Phone 2" });
++    assert.deepEqual(mapping, { name: "Name", mobile: "Mobile" });
++    assert.equal(warnings.length, 1);
++    assert.match(warnings[0], /Phone 2/);
++  });
++
++  test("auto-detect is case/space-insensitive and includes DOB", () => {
++    const { mapping } = resolveColumnMapping(buildHeaderLabels([" FULL NAME", "phone  number", "Date of  Birth"], 3));
++    assert.deepEqual(mapping, { name: "FULL NAME", mobile: "phone number", dateOfBirth: "Date of Birth" });
++  });
++});
++
++describe("Date of birth parsing", () => {
++  test("accepted formats", () => {
++    assert.equal(iso(parseDateOfBirth(new Date(Date.UTC(1990, 2, 15)))), "1990-03-15");
++    assert.equal(iso(parseDateOfBirth(new Date(1990, 2, 15))), "1990-03-15", "local-midnight Date");
++    assert.equal(iso(parseDateOfBirth("1990-03-15")), "1990-03-15");
++    assert.equal(iso(parseDateOfBirth("1990/3/5")), "1990-03-05");
++    assert.equal(iso(parseDateOfBirth("15/03/1990")), "1990-03-15", "DD/MM/YYYY (day first)");
++    assert.equal(iso(parseDateOfBirth("05-03-1990")), "1990-03-05", "05-03 is 5 March, not May 3");
++    assert.equal(iso(parseDateOfBirth("15.03.1990")), "1990-03-15");
++    assert.equal(iso(parseDateOfBirth("3/15/1990")), "1990-03-15", "unambiguous month-first");
++    assert.equal(iso(parseDateOfBirth("15/03/90")), "1990-03-15", "2-digit year");
++    assert.equal(iso(parseDateOfBirth("15 Mar 1990")), "1990-03-15");
++    assert.equal(iso(parseDateOfBirth("15-March-1990")), "1990-03-15");
++    assert.equal(iso(parseDateOfBirth(32947)), "1990-03-15", "Excel serial number");
++    assert.equal(iso(parseDateOfBirth("1990-03-15T00:00:00.000Z")), "1990-03-15");
++  });
++
++  test("blank is not an error", () => {
++    for (const v of ["", "   ", null, undefined]) assert.deepEqual(parseDateOfBirth(v), { date: null, invalid: false });
++  });
++
++  test("invalid, impossible, too old and future dates are rejected", () => {
++    const future = new Date(Date.now() + 5 * 86400000);
++    for (const v of ["31/02/1990", "not a date", "1990-13-01", "15/15/1990", "01/01/1850", future, "2999-01-01", -5, "15 Foo 1990"]) {
++      const r = parseDateOfBirth(v);
++      assert.equal(r.invalid, true, `expected invalid: ${String(v)}`);
++      assert.equal(r.date, null);
++    }
++  });
++
++  test("SheetJS xlsx date cells round-trip as the same calendar day", () => {
++    const ws = XLSX.utils.aoa_to_sheet([["DOB"], [new Date(Date.UTC(2001, 11, 31))]], { cellDates: true });
++    const wb = XLSX.utils.book_new();
++    XLSX.utils.book_append_sheet(wb, ws, "S");
++    const back = XLSX.read(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }), { type: "buffer", cellDates: true });
++    const cell = XLSX.utils.sheet_to_json(back.Sheets.S, { header: 1, raw: true })[1][0];
++    assert.equal(iso(parseDateOfBirth(cell)), "2001-12-31");
++  });
++});
++
++describe("Import phone normalisation", () => {
++  test("strips +91 / 91 / 091 and a domestic trunk 0 before a valid mobile", () => {
++    for (const v of ["9812345678", "+91 98123 45678", "919812345678", "0919812345678", "09812345678", "098123-45678"]) {
++      assert.equal(normalizeImportPhone(v), "9812345678", v);
++    }
++  });
++
++  test("11-digit landlines with a leading 0 are left untouched", () => {
++    assert.equal(normalizeImportPhone("020 12345678"), "02012345678");
++    assert.equal(normalizeImportPhone("01112345678"), "01112345678");
++  });
++});
++
++describe("Mapping: explicit 'Not mapped' and alias normalisation", () => {
++  test("a field sent as null or \"\" is never auto-detected (user chose 'Not mapped')", () => {
++    const headers = ["Name", "Mobile", "City", "Email"];
++    const { mapping } = resolveColumnMapping(headers, { name: "Name", mobile: "Mobile", city: null, email: "" });
++    assert.deepEqual(mapping, { name: "Name", mobile: "Mobile" });
++  });
++
++  test("fields absent from the mapping are still auto-detected (older clients)", () => {
++    assert.deepEqual(resolveColumnMapping(["Name", "Mobile", "City"], { name: "Name" }).mapping, { name: "Name", mobile: "Mobile", city: "City" });
++  });
++
++  test("auto-detect treats _ and - as spaces and covers the frontend aliases", () => {
++    const { mapping } = resolveColumnMapping(["Patient", "Mobile_No", "E-Mail", "Sex", "Birthdate", "Postal-Code", "WhatsApp Mobile", "Patient Address", "Town"]);
++    assert.deepEqual(mapping, {
++      name: "Patient",
++      mobile: "Mobile_No",
++      email: "E-Mail",
++      gender: "Sex",
++      dateOfBirth: "Birthdate",
++      pincode: "Postal-Code",
++      whatsappNumber: "WhatsApp Mobile",
++      address: "Patient Address",
++      city: "Town",
++    });
++    assert.equal(aliasKey("  E_-Mail  Address "), "e mail address");
++  });
++
++  test("aliases are already in aliasKey form (otherwise they could never match)", () => {
++    for (const aliases of Object.values(DEFAULT_HEADER_ALIASES)) for (const a of aliases) assert.equal(aliasKey(a), a);
++  });
++});
++
++describe("Sheet reading", () => {
++  const os = require("node:os");
++  const fs = require("node:fs");
++  const path = require("node:path");
++  const tmp = (name, buf) => {
++    const p = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "imp-")), name);
++    fs.writeFileSync(p, buf);
++    return p;
++  };
++
++  test("leading blank rows: header is the first non-blank row; row numbers are spreadsheet rows", () => {
++    const ws = XLSX.utils.aoa_to_sheet([[], [], ["Name", "", "Mobile"], ["Asha", "x", "9876543210"]]);
++    const wb = XLSX.utils.book_new();
++    XLSX.utils.book_append_sheet(wb, ws, "S");
++    const p = tmp("a.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
++    const prev = readWorkbookPreview(p);
++    assert.deepEqual(prev.headers, ["Name", "Column B", "Mobile"]);
++    assert.equal(prev.totalRows, 1);
++    assert.equal(prev.sampleRows[0].Mobile, "9876543210");
++
++    const csv = tmp("b.csv", Buffer.from(",,\nName,,Mobile\nAsha,x,9876543210\n"));
++    assert.deepEqual(readWorkbookPreview(csv).headers, ["Name", "Column B", "Mobile"]);
++  });
++
++  test("a '__proto__' header is plain data, not a prototype", () => {
++    const p = tmp("c.csv", Buffer.from("Name,__proto__,Mobile\nAsha,evil,9876543210\n"));
++    const row = readWorkbookPreview(p).sampleRows[0];
++    assert.equal(row.__proto__, "evil");
++    assert.equal(Object.getPrototypeOf(row), null);
++    assert.equal({}.evil, undefined);
++  });
++
++  test("trailing formatted-but-empty columns do not create extra headers", () => {
++    const ws = XLSX.utils.aoa_to_sheet([["Name", "Mobile", "", ""], ["Asha", "9876543210", "", ""]]);
++    const wb = XLSX.utils.book_new();
++    XLSX.utils.book_append_sheet(wb, ws, "S");
++    const p = tmp("d.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
++    assert.deepEqual(readWorkbookPreview(p).headers, ["Name", "Mobile"]);
++  });
++
++  test("a sheet with no non-blank rows has no headers and no rows", () => {
++    const p = tmp("e.csv", Buffer.from(",,\n,,\n"));
++    assert.deepEqual(readWorkbookPreview(p), { headers: [], sampleRows: [], totalRows: 0 });
++  });
++});
+--- a/tests/helpers/memoryDb.js
++++ b/tests/helpers/memoryDb.js
+@@ -9,13 +9,14 @@
+  * default 7.0.14) and the binary is cached by mongodb-memory-server after the
+  * first download.
+  *
+- * mongodb-memory-server is deliberately NOT a package.json dependency (the
+- * package itself is small, but its first run downloads a ~590 MB mongod
+- * binary). Resolution order:
+- *   1. MONGODB_MEMORY_SERVER_MODULE=/abs/path/to/node_modules/mongodb-memory-server
+- *   2. a local install: npm i --no-save mongodb-memory-server@10.1.4
++ * Uses the devDependency mongodb-memory-server-core (pinned). Unlike the
++ * "mongodb-memory-server" wrapper it has NO postinstall download, so
++ * `npm install` on Render/Vercel never fetches a mongod binary. The binary
++ * (~590 MB download, ~160 MB unpacked, mongod 7.0.14) is fetched on the
++ * first DB test run into ~/.cache/mongodb-binaries (or MONGOMS_DOWNLOAD_DIR)
++ * and reused afterwards. MONGODB_MEMORY_SERVER_MODULE can point elsewhere.
+  *
+- * When it can't be resolved:
++ * When the module or the binary is unavailable:
+  *   - REQUIRE_DB_TESTS=1 (set by `npm run test:db`) → the suite FAILS.
+  *   - otherwise → exactly one test per DB suite is reported as SKIPPED,
+  *     with the reason, in the test summary (never silently omitted).
+@@ -31,13 +32,16 @@
+ let MongoMemoryServer = null;
+ let unavailableReason = "";
+ try {
+-  ({ MongoMemoryServer } = require(process.env.MONGODB_MEMORY_SERVER_MODULE || "mongodb-memory-server"));
++  ({ MongoMemoryServer } = require(process.env.MONGODB_MEMORY_SERVER_MODULE || "mongodb-memory-server-core"));
+ } catch {
+   unavailableReason =
+-    "mongodb-memory-server is not installed — run `npm i --no-save mongodb-memory-server@10.1.4` " +
++    "mongodb-memory-server-core is not installed — run `npm install` (it is a devDependency) " +
+     "or set MONGODB_MEMORY_SERVER_MODULE";
+ }
+ 
++// Generous: on a loaded machine mongod can take >10 s (the library default) to start.
++const LAUNCH_OPTIONS = { instance: { launchTimeout: 60000 } };
++
+ /**
+  * describe() that runs `fn` only when an in-memory MongoDB is available;
+  * otherwise registers one visible skipped (or, with REQUIRE_DB_TESTS=1,
+@@ -56,7 +60,7 @@
+ 
+ /** Starts mongod + connects mongoose + listens. Returns helpers and stop(). */
+ async function startDbApp() {
+-  const mongod = await MongoMemoryServer.create();
++  const mongod = await MongoMemoryServer.create(LAUNCH_OPTIONS);
+   const uri = mongod.getUri();
+   const host = new URL(uri).hostname;
+   assert.ok(host === "127.0.0.1" || host === "localhost", "refusing to connect to a non-loopback database");
+@@ -98,4 +102,4 @@
+   return { mongoose, base, api, stop };
+ }
+ 
+-module.exports = { dbSuite, startDbApp, env, getMongoMemoryServer: () => MongoMemoryServer };
++module.exports = { dbSuite, startDbApp, env, getMongoMemoryServer: () => MongoMemoryServer, LAUNCH_OPTIONS };
+--- a/tests/phase2.db.test.js
++++ b/tests/phase2.db.test.js
+@@ -277,4 +277,44 @@
+       assert.ok(viaComplete.body.data.completedAt);
+     });
+   });
++
++  // ------------------------------------------------------------------
++  describe("9. Lead edit never erases follow-ups or notes", () => {
++    test("unchanged date is a no-op; a changed date replaces only the auto follow-up; manual follow-ups and notes survive", async () => {
++      const d1 = new Date(Date.now() + 3 * 86400000).toISOString();
++      const d2 = new Date(Date.now() + 6 * 86400000).toISOString();
++      const lead = await staff("POST", "/api/v1/leads", { body: { name: "Keep Followups", mobile: "9822200001", nextFollowUpDate: d1, notes: "Website message: wants a home visit" } });
++      assert.equal(lead.status, 201, lead.text);
++      const id = lead.body.data._id;
++      const manual = await staff("POST", "/api/v1/follow-ups", { body: { leadId: id, date: new Date(Date.now() + 10 * 86400000).toISOString(), description: "Call back about thyroid package" } });
++      assert.equal(manual.status, 201, manual.text);
++      const pending = () => models.FollowUp.find({ lead: id, status: "pending" }).lean();
++      const autoBefore = (await pending()).find((f) => f.description === "Follow-up scheduled from lead");
++      assert.ok(autoBefore);
++
++      // Full-form style save that re-sends the stored date: nothing is recreated.
++      const stored = (await models.Lead.findById(id).lean()).nextFollowUpDate.toISOString();
++      const same = await staff("PATCH", `/api/v1/leads/${id}`, { body: { status: "contacted", nextFollowUpDate: stored } });
++      assert.equal(same.status, 200);
++      let now = await pending();
++      assert.equal(now.length, 2);
++      assert.ok(now.some((f) => String(f._id) === String(autoBefore._id)), "auto follow-up kept (not recreated)");
++
++      // A real date change: auto follow-up replaced, manual one kept.
++      assert.equal((await staff("PATCH", `/api/v1/leads/${id}`, { body: { nextFollowUpDate: d2 } })).status, 200);
++      now = await pending();
++      assert.equal(now.length, 2);
++      assert.ok(now.some((f) => f.description === "Call back about thyroid package"), "manual follow-up survives");
++      assert.equal(now.find((f) => f.description === "Follow-up scheduled from lead").date.toISOString(), d2);
++
++      // Clearing the date removes only the auto follow-up.
++      assert.equal((await staff("PATCH", `/api/v1/leads/${id}`, { body: { nextFollowUpDate: "" } })).status, 200);
++      now = await pending();
++      assert.deepEqual(now.map((f) => f.description), ["Call back about thyroid package"]);
++
++      const after = await models.Lead.findById(id).lean();
++      assert.equal(after.notes, "Website message: wants a home visit", "edits without notes keep the stored notes");
++      assert.equal(after.status, "contacted");
++    });
++  });
+ });
+# binary: vendor/xlsx-0.20.3.tgz (copied by apply-staging.js, sha256 8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8)
