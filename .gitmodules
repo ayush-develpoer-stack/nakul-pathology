@@ -1,0 +1,8 @@
+[submodule "backend"]
+	path = backend
+	url = https://github.com/ayush-develpoer-stack/nakul-pathology-crm-backend.git
+	branch = main
+[submodule "frontend"]
+	path = frontend
+	url = https://github.com/ayush-develpoer-stack/nakul-pathology-crm-frontend.git
+	branch = main

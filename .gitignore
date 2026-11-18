@@ -1,0 +1,32 @@
+# Umbrella repository: the application code lives in the backend/ and
+# frontend/ submodules. Everything below stays on local disk only.
+
+# Local archives, backups and handover kits (kept on disk, never pushed)
+backend-backup-*/
+backend-transfer/
+FINAL_*.md
+TWILIO_MIGRATION_AUDIT.md
+MSG91_FINAL_SETUP_GUIDE.md
+RELEASE-CHECKLIST.md
+/index.html
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
